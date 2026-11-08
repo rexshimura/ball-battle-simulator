@@ -2161,7 +2161,7 @@ function BallBattleGame() {
       physicsRef.current.damageTexts.push({
         x: x + offsetX,
         y: y - 12,
-        text: isShieldAbsorb ? `🛡 -${Math.round(amount)}` : (isBurn ? `🔥 -${Math.round(amount)}` : `-${Math.round(amount)}`),
+        text: isShieldAbsorb ? `🛡 -${Math.round(amount)}` : `-${Math.round(amount)}`,
         fontSize,
         opacity: 1.0,
         isCritical,
