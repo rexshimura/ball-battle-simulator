@@ -162,7 +162,7 @@ const EFFECT_TOOLTIPS = {
     title: 'LUCKY ROLL',
     category: 'WEAPON TAG',
     icon: <DiceIcon size={14} color="#f59e0b" />,
-    description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it rolls random damage: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or God 99 (1%). Features a Pity System: taking damage 10 times guarantees a High Roll (30-50 DMG) on the next roll!',
+    description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it rolls random damage: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or God 99 (1%). Features a 7-hit Pity System: taking damage 7 times absorbs the pity to transform any Mid or Low roll into a High Roll (30-50 DMG)!',
   },
 };
 
@@ -2578,11 +2578,24 @@ function BallBattleGame() {
         }
       }
 
-      // Dice Ball: Count damage received for Pity system (10 counts = Guaranteed High Roll)
+      // Dice Ball: Count damage received for Pity system (7 hits = absorbs pity to change Mid/Low to High Roll)
       if (victim.type === BALL_TYPES.DICE && amount > 0) {
-        victim.dicePity = Math.min(10, (victim.dicePity || 0) + 1);
-        if (victim.dicePity === 10) {
-          spawnParticles(victim.x, victim.y, '#fbbf24', 12, 2.2);
+        victim.dicePity = Math.min(7, (victim.dicePity || 0) + 1);
+
+        // If pity is available (7 hits), absorb pity and change to High Roll if current roll is Mid or Low (not High or God)
+        const isMidOrLow = victim.diceTier === 'low' || victim.diceTier === 'mid' || !victim.diceTier || (victim.damage < 30 && victim.damage !== 99);
+        if (victim.dicePity >= 7 && isMidOrLow) {
+          victim.dicePity = 0; // absorb the pity
+          const highDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
+          victim.damage = highDmg;
+          victim.displayedDamage = highDmg;
+          victim.diceTier = 'high';
+          victim.dicePopScale = 1.5;
+          sound.play('diceRollHigh', 0.95);
+          spawnParticles(victim.x, victim.y, '#fbbf24', 16, 2.5);
+          spawnParticles(victim.x, victim.y, '#f59e0b', 10, 2.0);
+        } else if (victim.dicePity === 7) {
+          spawnParticles(victim.x, victim.y, '#fbbf24', 10, 2.0);
         }
       }
 
@@ -3624,34 +3637,19 @@ function BallBattleGame() {
 
               // Dice Ball: Roll random damage on enemy collision based on roll sound pitch
               const rollDiceBall = (diceBall) => {
-                const isPityTrigger = (diceBall.dicePity || 0) >= 10;
                 const roll = Math.random();
                 let tier, targetDmg, sfx;
 
-                if (isPityTrigger) {
-                  // 10 Counts Pity Guarantee: High Roll (30-50 DMG) or 1% God Roll
-                  if (roll < 0.01) {
-                    tier = 'god';
-                    targetDmg = 99;
-                    sfx = 'diceRollHigh';
-                  } else {
-                    tier = 'high';
-                    targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
-                    sfx = 'diceRollHigh';
-                  }
-                  diceBall.dicePity = 0; // Pity consumed
-                } else if (roll < 0.01) {
+                if (roll < 0.01) {
                   // 1% God Tier (99 DMG)
                   tier = 'god';
                   targetDmg = 99;
                   sfx = 'diceRollHigh';
-                  diceBall.dicePity = 0; // Natural God roll resets pity
                 } else if (roll < 0.06) {
                   // 5% High Tier (30 - 50 DMG)
                   tier = 'high';
                   targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
                   sfx = 'diceRollHigh';
-                  diceBall.dicePity = 0; // Natural High roll resets pity
                 } else if (roll < 0.26) {
                   // 20% Mid Tier (15 - 25 DMG)
                   tier = 'mid';
@@ -3662,6 +3660,14 @@ function BallBattleGame() {
                   tier = 'low';
                   targetDmg = Math.floor(Math.random() * (12 - 5 + 1)) + 5;
                   sfx = 'diceRollLow';
+                }
+
+                // If pity is available (7 hits), absorb pity and change to High Roll if current roll is Mid or Low (not High or God)
+                if ((diceBall.dicePity || 0) >= 7 && (tier === 'mid' || tier === 'low')) {
+                  diceBall.dicePity = 0; // absorb the pity
+                  tier = 'high';
+                  targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
+                  sfx = 'diceRollHigh';
                 }
 
                 sound.play(sfx, 0.95);
@@ -4749,17 +4755,17 @@ function BallBattleGame() {
             ctx.strokeRect(barX, healBarY, barWidth, healBarH);
           }
 
-          // Dice Ball 10-Count Pity & Roll Indicator below HP bar
+          // Dice Ball 7-Count Pity & Roll Indicator below HP bar
           if (ball.type === BALL_TYPES.DICE) {
-            const pityCount = Math.min(10, ball.dicePity || 0);
-            const isPityReady = pityCount >= 10;
-            const pipsTotal = 10;
+            const pityCount = Math.min(7, ball.dicePity || 0);
+            const isPityReady = pityCount >= 7;
+            const pipsTotal = 7;
             const pipH = 2.5;
-            const pipGap = 1;
+            const pipGap = 1.5;
             const pipW = (barWidth - (pipsTotal - 1) * pipGap) / pipsTotal;
             const pityY = barY + barHeight + 2;
 
-            // Render 10 Pity Segment Pips
+            // Render 7 Pity Segment Pips
             for (let p = 0; p < pipsTotal; p++) {
               const px = barX + p * (pipW + pipGap);
               const isFilled = pityCount > p;
@@ -5774,22 +5780,22 @@ function BallBattleGame() {
 
                             {/* Dice Ball Roll & Pity Status in HUD */}
                             {b.type === BALL_TYPES.DICE && (
-                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 10 times guarantees a High Roll (30-50 DMG)">
+                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 7 times absorbs pity to transform Mid/Low rolls into a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
-                                    {(b.dicePity || 0) >= 10 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
+                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                    {(b.dicePity || 0) >= 7 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
-                                    {b.dicePity || 0} / 10 COUNTS
+                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                    {b.dicePity || 0} / 7 HITS
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 10) * 100))}%`,
+                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 7) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b',
-                                      boxShadow: (b.dicePity || 0) >= 10 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      backgroundColor: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b',
+                                      boxShadow: (b.dicePity || 0) >= 7 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
                                       transition: 'width 0.1s ease',
                                     }}
                                   />
@@ -6300,22 +6306,22 @@ function BallBattleGame() {
 
                             {/* Dice Ball Roll & Pity Status in HUD */}
                             {b.type === BALL_TYPES.DICE && (
-                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 10 times guarantees a High Roll (30-50 DMG)">
+                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 7 times absorbs pity to transform Mid/Low rolls into a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
-                                    {(b.dicePity || 0) >= 10 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
+                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                    {(b.dicePity || 0) >= 7 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
-                                    {b.dicePity || 0} / 10 COUNTS
+                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                    {b.dicePity || 0} / 7 HITS
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 10) * 100))}%`,
+                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 7) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b',
-                                      boxShadow: (b.dicePity || 0) >= 10 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      backgroundColor: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b',
+                                      boxShadow: (b.dicePity || 0) >= 7 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
                                       transition: 'width 0.1s ease',
                                     }}
                                   />
