@@ -162,7 +162,7 @@ const EFFECT_TOOLTIPS = {
     title: 'LUCKY ROLL',
     category: 'WEAPON TAG',
     icon: <DiceIcon size={14} color="#f59e0b" />,
-    description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or legendary God 99 DMG (1%). Every hit thereafter deals its rolled value and rolls the next damage number.',
+    description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it rolls random damage: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or God 99 (1%). Features a Pity System: taking damage 10 times guarantees a High Roll (30-50 DMG) on the next roll!',
   },
 };
 
@@ -2189,6 +2189,7 @@ function BallBattleGame() {
         healTimer: 6000,
         healFlashTimer: 0,
         diceHits: 0,
+        dicePity: 0,
         diceDamage: 1,
         displayedDamage: 1,
         diceRollTimer: 0,
@@ -2574,6 +2575,14 @@ function BallBattleGame() {
           victim.shield = (victim.shield || 0) + shieldVal;
           spawnParticles(victim.x, victim.y, '#38bdf8', 16, 2.0);
           sound.play('armorUp', 0.9);
+        }
+      }
+
+      // Dice Ball: Count damage received for Pity system (10 counts = Guaranteed High Roll)
+      if (victim.type === BALL_TYPES.DICE && amount > 0) {
+        victim.dicePity = Math.min(10, (victim.dicePity || 0) + 1);
+        if (victim.dicePity === 10) {
+          spawnParticles(victim.x, victim.y, '#fbbf24', 12, 2.2);
         }
       }
 
@@ -3615,18 +3624,34 @@ function BallBattleGame() {
 
               // Dice Ball: Roll random damage on enemy collision based on roll sound pitch
               const rollDiceBall = (diceBall) => {
+                const isPityTrigger = (diceBall.dicePity || 0) >= 10;
                 const roll = Math.random();
                 let tier, targetDmg, sfx;
-                if (roll < 0.01) {
+
+                if (isPityTrigger) {
+                  // 10 Counts Pity Guarantee: High Roll (30-50 DMG) or 1% God Roll
+                  if (roll < 0.01) {
+                    tier = 'god';
+                    targetDmg = 99;
+                    sfx = 'diceRollHigh';
+                  } else {
+                    tier = 'high';
+                    targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
+                    sfx = 'diceRollHigh';
+                  }
+                  diceBall.dicePity = 0; // Pity consumed
+                } else if (roll < 0.01) {
                   // 1% God Tier (99 DMG)
                   tier = 'god';
                   targetDmg = 99;
                   sfx = 'diceRollHigh';
+                  diceBall.dicePity = 0; // Natural God roll resets pity
                 } else if (roll < 0.06) {
                   // 5% High Tier (30 - 50 DMG)
                   tier = 'high';
                   targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
                   sfx = 'diceRollHigh';
+                  diceBall.dicePity = 0; // Natural High roll resets pity
                 } else if (roll < 0.26) {
                   // 20% Mid Tier (15 - 25 DMG)
                   tier = 'mid';
@@ -4724,23 +4749,50 @@ function BallBattleGame() {
             ctx.strokeRect(barX, healBarY, barWidth, healBarH);
           }
 
-          // Dice Ball roll progress bar on arena floor/canvas
-          if (ball.type === BALL_TYPES.DICE && (ball.diceRollTimer || 0) > 0) {
-            const diceBarH = 2.5;
-            const diceBarY = barY + barHeight + 2;
-            const totalRoll = 750;
-            const prog = Math.min(1, Math.max(0, 1 - ball.diceRollTimer / totalRoll));
+          // Dice Ball 10-Count Pity & Roll Indicator below HP bar
+          if (ball.type === BALL_TYPES.DICE) {
+            const pityCount = Math.min(10, ball.dicePity || 0);
+            const isPityReady = pityCount >= 10;
+            const pipsTotal = 10;
+            const pipH = 2.5;
+            const pipGap = 1;
+            const pipW = (barWidth - (pipsTotal - 1) * pipGap) / pipsTotal;
+            const pityY = barY + barHeight + 2;
 
-            ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
-            ctx.fillRect(barX, diceBarY, barWidth, diceBarH);
+            // Render 10 Pity Segment Pips
+            for (let p = 0; p < pipsTotal; p++) {
+              const px = barX + p * (pipW + pipGap);
+              const isFilled = pityCount > p;
+              if (isFilled) {
+                ctx.fillStyle = isPityReady ? '#fbbf24' : '#f59e0b';
+                if (isPityReady) {
+                  ctx.shadowColor = '#fbbf24';
+                  ctx.shadowBlur = 4;
+                }
+              } else {
+                ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
+              }
+              ctx.fillRect(px, pityY, pipW, pipH);
+              ctx.shadowBlur = 0;
 
-            const tierCol = ball.diceTier === 'god' ? '#ef4444' : (ball.diceTier === 'high' ? '#f59e0b' : (ball.diceTier === 'mid' ? '#06b6d4' : '#94a3b8'));
-            ctx.fillStyle = tierCol;
-            ctx.fillRect(barX, diceBarY, barWidth * prog, diceBarH);
+              ctx.strokeStyle = isPityReady && isFilled ? '#f59e0b' : (isLight ? '#94a3b8' : '#334155');
+              ctx.lineWidth = 0.5;
+              ctx.strokeRect(px, pityY, pipW, pipH);
+            }
 
-            ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(barX, diceBarY, barWidth, diceBarH);
+            // Snappy Roll Progress bar overlay right below pity pips when rolling
+            if ((ball.diceRollTimer || 0) > 0) {
+              const rollBarH = 2.0;
+              const rollBarY = pityY + pipH + 1.5;
+              const prog = Math.min(1, Math.max(0, 1 - ball.diceRollTimer / 260));
+
+              ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
+              ctx.fillRect(barX, rollBarY, barWidth, rollBarH);
+
+              const tierCol = ball.diceTier === 'god' ? '#ef4444' : (ball.diceTier === 'high' ? '#f59e0b' : (ball.diceTier === 'mid' ? '#06b6d4' : '#94a3b8'));
+              ctx.fillStyle = tierCol;
+              ctx.fillRect(barX, rollBarY, barWidth * prog, rollBarH);
+            }
           }
 
           // Sniper Ball 4-second lock-on sniper cooldown / aim indicator on arena floor/canvas
@@ -5720,24 +5772,25 @@ function BallBattleGame() {
                               </div>
                             )}
 
-                            {/* Dice Ball Roll Status in HUD */}
-                            {b.type === BALL_TYPES.DICE && b.diceRollTimer > 0 && (
-                              <div className="hud-shield-charge-wrapper" title="Dice Ball: Rolling new damage!">
+                            {/* Dice Ball Roll & Pity Status in HUD */}
+                            {b.type === BALL_TYPES.DICE && (
+                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 10 times guarantees a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')) }}>
-                                    {b.diceTier ? `${b.diceTier.toUpperCase()} ROLL` : 'ROLLING...'}
+                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
+                                    {(b.dicePity || 0) >= 10 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
-                                    {b.displayedDamage ?? b.damage} DMG
+                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
+                                    {b.dicePity || 0} / 10 COUNTS
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${Math.min(100, Math.max(0, (1 - b.diceRollTimer / 750) * 100))}%`,
+                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 10) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')),
-                                      boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      backgroundColor: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b',
+                                      boxShadow: (b.dicePity || 0) >= 10 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      transition: 'width 0.1s ease',
                                     }}
                                   />
                                 </div>
@@ -6245,24 +6298,25 @@ function BallBattleGame() {
                               </div>
                             )}
 
-                            {/* Dice Ball Roll Status in HUD */}
-                            {b.type === BALL_TYPES.DICE && b.diceRollTimer > 0 && (
-                              <div className="hud-shield-charge-wrapper" title="Dice Ball: Rolling new damage!">
+                            {/* Dice Ball Roll & Pity Status in HUD */}
+                            {b.type === BALL_TYPES.DICE && (
+                              <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 10 times guarantees a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')) }}>
-                                    {b.diceTier ? `${b.diceTier.toUpperCase()} ROLL` : 'ROLLING...'}
+                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
+                                    {(b.dicePity || 0) >= 10 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
-                                    {b.displayedDamage ?? b.damage} DMG
+                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b' }}>
+                                    {b.dicePity || 0} / 10 COUNTS
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${Math.min(100, Math.max(0, (1 - b.diceRollTimer / 750) * 100))}%`,
+                                      width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 10) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')),
-                                      boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      backgroundColor: (b.dicePity || 0) >= 10 ? '#fbbf24' : '#f59e0b',
+                                      boxShadow: (b.dicePity || 0) >= 10 ? '0 0 8px rgba(251, 191, 36, 0.8)' : '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      transition: 'width 0.1s ease',
                                     }}
                                   />
                                 </div>

@@ -405,7 +405,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.DICE,
     name: 'Dice Ball',
     rarity: RARITIES.LEGENDARY,
-    description: 'A high-stakes casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value based on probability: Low (5-12, 75%), Mid (15-25, 20%), High (30-50, 5%), or a legendary 1% God roll dealing 99 DMG!',
+    description: 'A high-stakes casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value based on probability: Low (5-12, 75%), Mid (15-25, 20%), High (30-50, 5%), or a legendary 1% God roll dealing 99 DMG! Features a Pity System: taking damage 10 times guarantees a High Roll.',
     baseHp: 100,
     damage: 1,
     speed: 2.2,
@@ -415,7 +415,7 @@ export const BALL_CONFIGS = {
     highlightColor: '#ffffff', // High-gloss reflection
     shadowColor: '#94a3b8',    // Slate beveled shadow
     pipColor: '#0f172a',       // Obsidian dice pips
-    special: 'Lucky Roll (Low 75%, Mid 20%, High 5%, God 99 1%)',
+    special: 'Lucky Roll (Low 75%, Mid 20%, High 5%, God 1% | 10 Hits Taken = Pity High Roll)',
   },
 };
 
