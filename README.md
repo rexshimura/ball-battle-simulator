@@ -13,3 +13,11 @@ An arcade-style 2D physics battle simulator built with React 19, HTML5 Canvas, W
 - Mounted rotating heavy firearm that targets and fires high-caliber projectiles (32 DMG) every 3 seconds.
 - Custom muzzle flare, bullet physics, and ricochet mechanics.
 
+### Knife Ball (Rare)
+- Equipped with a compact combat knife spinning rapidly at double speed.
+- Delivers close-quarters slashing damage (15 DMG) with precision contact hitboxes.
+
+### Shard Ball (Unique)
+- Direct enemy contact locks on and fires 6 consecutive homing shards (1 DMG each).
+- Inflicts Shard Target status with custom purple crystal trail effects.
+
