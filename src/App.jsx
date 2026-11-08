@@ -156,7 +156,7 @@ const EFFECT_TOOLTIPS = {
     title: 'SNIPER LOCK-ON',
     category: 'ABILITY TAG',
     icon: <SniperIcon size={14} color="#38bdf8" />,
-    description: 'Periodically freezes in midair to lock a precision laser sight onto the nearest enemy, discharging an armor-piercing 20 DMG sniper round.',
+    description: 'Specialized for long range with very low body collision damage (3 DMG). Periodically freezes in midair to lock a laser scope onto an enemy and fire a 20 DMG sniper shot.',
   },
 };
 
@@ -333,6 +333,11 @@ function drawThornTrap(ctx, trap, isLight = false) {
   const easeScale = p < 1.0 ? Math.sin(p * Math.PI / 2) * (1 + 0.14 * Math.sin(p * Math.PI)) : 1.0;
   ctx.scale(easeScale, easeScale);
 
+  const isBlueTeam = trap.team === TEAMS.BLUE.id || trap.team === 'blue' || trap.team === 0;
+  const flowerPetalPrimary = isBlueTeam ? '#3b82f6' : '#f43f5e';
+  const flowerPetalSecondary = isBlueTeam ? '#60a5fa' : '#fb7185';
+  const flowerCenter = isBlueTeam ? '#93c5fd' : '#fde047';
+
   const variation = trap.sizeVariation || 'M';
   const leafColor1 = isLight ? '#15803d' : '#22c55e';
   const leafColor2 = isLight ? '#166534' : '#16a34a';
@@ -371,8 +376,8 @@ function drawThornTrap(ctx, trap, isLight = false) {
     drawIvyLeaf(ctx, 34, 1, 6.5, -0.7, leafColor2, isLight);
     drawIvyLeaf(ctx, 42, 0, 6.0, 0.1, leafColor1, isLight);
 
-    // Rosebud blossom at tip
-    drawBloomFlower(ctx, 36, -2, 4.4, '#f43f5e', '#fde047', 0.2);
+    // Rosebud blossom at tip (team colored)
+    drawBloomFlower(ctx, 36, -2, 4.4, flowerPetalPrimary, flowerCenter, 0.2);
 
   } else if (variation === 'L') {
     // VARIATION L (Large - Lush twisting climbing tree-like vine, ~96px reach into arena)
@@ -459,10 +464,10 @@ function drawThornTrap(ctx, trap, isLight = false) {
       drawIvyLeaf(ctx, lx, ly, len, ang, idx % 2 === 0 ? leafColor1 : leafColor2, isLight);
     });
 
-    // Crimson Wild Rose Flower (matching the red dot in user's sketch!)
-    drawBloomFlower(ctx, 52, -18, 7.5, '#f43f5e', '#fde047', 0.25);
-    drawBloomFlower(ctx, 80, 12, 5.0, '#fb7185', '#fde047', -0.3);
-    drawBloomFlower(ctx, 94, 2, 4.0, '#f43f5e', '#fde047', 0.2);
+    // Wild Rose Flower (team colored)
+    drawBloomFlower(ctx, 52, -18, 7.5, flowerPetalPrimary, flowerCenter, 0.25);
+    drawBloomFlower(ctx, 80, 12, 5.0, flowerPetalSecondary, flowerCenter, -0.3);
+    drawBloomFlower(ctx, 94, 2, 4.0, flowerPetalPrimary, flowerCenter, 0.2);
 
   } else {
     // VARIATION M (Medium - Intertwined climbing vines, ~68px reach into arena)
@@ -528,8 +533,8 @@ function drawThornTrap(ctx, trap, isLight = false) {
       drawIvyLeaf(ctx, lx, ly, len, ang, idx % 2 === 0 ? leafColor1 : leafColor2, isLight);
     });
 
-    drawBloomFlower(ctx, 42, -10, 5.5, '#fb7185', '#fde047', -0.3);
-    drawBloomFlower(ctx, 62, 5, 4.5, '#f43f5e', '#fde047', 0.4);
+    drawBloomFlower(ctx, 42, -10, 5.5, flowerPetalSecondary, flowerCenter, -0.3);
+    drawBloomFlower(ctx, 62, 5, 4.5, flowerPetalPrimary, flowerCenter, 0.4);
   }
 }
 
@@ -3176,7 +3181,8 @@ function BallBattleGame() {
                 const pCount = sizeVariation === 'L' ? 16 : (sizeVariation === 'M' ? 11 : 8);
                 spawnParticles(trapX, trapY, '#15803d', pCount, 1.8);
                 spawnParticles(trapX, trapY, '#4ade80', pCount - 2, 1.4);
-                spawnParticles(trapX, trapY, '#f43f5e', Math.round(pCount * 0.6), 1.2);
+                const isBlue = ball.team === TEAMS.BLUE.id || ball.team === 'blue' || ball.team === 0;
+                spawnParticles(trapX, trapY, isBlue ? '#38bdf8' : '#f43f5e', Math.round(pCount * 0.6), 1.2);
               }
             }
           };
