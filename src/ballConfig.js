@@ -16,6 +16,7 @@ export const BALL_TYPES = {
   SHARD: 'SHARD',
   GUN: 'GUN',
   THORN: 'THORN',
+  MULTI: 'MULTI',
 };
 
 export const RARITIES = {
@@ -281,6 +282,22 @@ export const BALL_CONFIGS = {
     thornColor: '#166534',
     special: 'Thorns & Bleed',
     trapDamage: 2,
+  },
+  [BALL_TYPES.MULTI]: {
+    id: BALL_TYPES.MULTI,
+    name: 'Multi Ball',
+    rarity: RARITIES.EPIC,
+    description: 'Moves with high velocity like Fast Ball with half HP (50 HP). Upon death, splits into 2 mini copies (25 HP each), which subsequently split into 2 micro copies (10 HP each) when defeated.',
+    baseHp: 50,
+    damage: 7,
+    speed: 3.5,
+    radius: 34,
+    mass: 0.75,
+    bodyColor: '#c026d3',      // energetic vibrant fuchsia
+    highlightColor: '#f0abfc', // bright electric pink glint
+    shadowColor: '#701a75',    // deep dark fuchsia shadow
+    special: 'Split on Death',
+    splitStage: 1,
   },
 };
 

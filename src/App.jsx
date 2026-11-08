@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -127,6 +127,12 @@ const EFFECT_TOOLTIPS = {
     category: 'WEAPON TAG',
     icon: <KnifeIcon size={14} color="#94a3b8" />,
     description: 'Equipped with a compact combat knife that turns at rapid double speed, delivering swift 15 damage slashes in close proximity.',
+  },
+  SPLIT: {
+    title: 'SPLIT',
+    category: 'SPECIAL TRAIT',
+    icon: <SplitIcon size={14} color="#d946ef" />,
+    description: 'Starts with half HP (50 HP). Upon death, splits into 2 mini copies with 25 HP Full each, which subsequently split into 2 micro copies with 10 HP Full each when defeated.',
   },
 };
 
@@ -1086,6 +1092,89 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
+    // Multi Ball: Glowing internal dividing cores & mitotic fission ring
+    if (config.id === BALL_TYPES.MULTI) {
+      ctx.save();
+      ctx.clip();
+      ctx.translate(x, y);
+      ctx.rotate(rotationAngle);
+
+      const stage = config.splitStage || 1;
+
+      // Faint division meridian across the sphere
+      ctx.strokeStyle = 'rgba(240, 171, 252, 0.45)';
+      ctx.lineWidth = Math.max(1, radius * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(0, -radius * 0.9);
+      ctx.lineTo(0, radius * 0.9);
+      ctx.stroke();
+
+      if (stage === 1) {
+        // Generation 1 (Original, 50 HP): 2 glowing dividing nuclei connected by energy bridge
+        const dOffset = radius * 0.32;
+        const coreR = radius * 0.22;
+
+        // Connecting energy bridge
+        ctx.strokeStyle = '#f0abfc';
+        ctx.lineWidth = Math.max(1.2, radius * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(-dOffset, 0);
+        ctx.lineTo(dOffset, 0);
+        ctx.stroke();
+
+        // 2 Cores
+        [-dOffset, dOffset].forEach(cx => {
+          ctx.beginPath();
+          ctx.arc(cx, 0, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = '#fdf4ff';
+          ctx.fill();
+          ctx.strokeStyle = '#e879f9';
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+
+          // Inner spark
+          ctx.beginPath();
+          ctx.arc(cx - coreR * 0.25, -coreR * 0.25, coreR * 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+        });
+
+      } else if (stage === 2) {
+        // Generation 2 (Mini, 25 HP): 2 smaller dividing cores
+        const dOffset = radius * 0.3;
+        const coreR = radius * 0.24;
+
+        [-dOffset, dOffset].forEach(cx => {
+          ctx.beginPath();
+          ctx.arc(cx, 0, coreR, 0, Math.PI * 2);
+          ctx.fillStyle = '#fdf4ff';
+          ctx.fill();
+          ctx.strokeStyle = '#e879f9';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        });
+
+      } else {
+        // Generation 3 (Micro, 10 HP): 1 single intense glowing core
+        const coreR = radius * 0.35;
+        ctx.beginPath();
+        ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+        ctx.fillStyle = '#fdf4ff';
+        ctx.fill();
+        ctx.strokeStyle = '#e879f9';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Specular sheen
+      ctx.beginPath();
+      ctx.arc(-radius * 0.25, -radius * 0.25, radius * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
     // Shield active: Body crystalline metallic shine overlay
     if (shield > 0) {
       ctx.save();
@@ -1416,6 +1505,8 @@ function BallBattleGame() {
         gunSpeed: 0.045,
         gunCooldown: 3000,
         thornAngle: b.angle || 0,
+        multiAngle: b.angle || 0,
+        splitStage: b.config?.splitStage || 1,
         targetRadius: b.config?.radius || b.radius,
         targetMass: b.config?.mass || b.mass,
         growCooldown: 0,
@@ -1921,6 +2012,8 @@ function BallBattleGame() {
         }
       }
 
+      const spawnedSplitBalls = [];
+
       balls.forEach(ball => {
         if (ball.isDead) return;
 
@@ -1939,7 +2032,7 @@ function BallBattleGame() {
             spawnParticles(
               ball.x + (Math.random() - 0.5) * ball.radius * 1.3,
               ball.y + (Math.random() - 0.5) * ball.radius * 1.3,
-              Math.random() < 0.5 ? '#f59e0b' : '#ef4444',
+              ball.type === BALL_TYPES.MULTI ? '#f0abfc' : (Math.random() < 0.5 ? '#f59e0b' : '#ef4444'),
               2,
               0.8 + deathProgress * 0.8
             );
@@ -1948,17 +2041,101 @@ function BallBattleGame() {
             spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.6);
           }
 
-          // Detonation timer finished -> trigger massive explosion
+          // Detonation timer finished -> trigger explosion or Multi Ball fission split
           if (ball.deathTimer <= 0) {
             ball.isDying = false;
             ball.isDead = true;
-            sound.play('death', 0.95);
 
-            const deadBodyColor = ball.config?.bodyColor || ball.color || '#ef4444';
-            spawnParticles(ball.x, ball.y, deadBodyColor, 40, 3.6);
-            spawnParticles(ball.x, ball.y, '#f97316', 28, 2.8);
-            spawnParticles(ball.x, ball.y, '#ffffff', 20, 2.2);
-            spawnParticles(ball.x, ball.y, '#ef4444', 22, 2.5);
+            const isMultiBallSplit = ball.type === BALL_TYPES.MULTI && (ball.splitStage || 1) < 3;
+
+            if (isMultiBallSplit) {
+              const nextStage = (ball.splitStage || 1) + 1;
+              const nextHp = nextStage === 2 ? 25 : 10;
+              const nextRadius = nextStage === 2 ? 24 : 16;
+              const nextMass = nextStage === 2 ? 0.55 : 0.35;
+              const nextSpeed = nextStage === 2 ? 3.6 : 3.9;
+              const nextDamage = nextStage === 2 ? 6 : 5;
+              const nextName = nextStage === 2 ? 'Mini Multi Ball' : 'Micro Multi Ball';
+
+              sound.play('split', 0.95);
+
+              // Vibrant mitotic fission splitting particles
+              spawnParticles(ball.x, ball.y, '#f0abfc', 28, 3.2);
+              spawnParticles(ball.x, ball.y, '#c026d3', 22, 2.5);
+              spawnParticles(ball.x, ball.y, '#ffffff', 18, 1.8);
+              spawnParticles(ball.x, ball.y, ball.teamColor || '#3b82f6', 14, 1.5);
+
+              // 2 split balls fly out in divergent complementary directions
+              const baseAng = (ball.vx !== 0 || ball.vy !== 0) ? Math.atan2(ball.vy, ball.vx) : (ball.angle || Math.random() * Math.PI * 2);
+              const angles = [baseAng + 0.68, baseAng - 0.68];
+
+              angles.forEach((ang, sIdx) => {
+                const offsetDist = nextRadius + 5;
+                const spawnX = Math.max(nextRadius + 4, Math.min(CANVAS_SIZE - nextRadius - 4, ball.x + Math.cos(ang) * offsetDist));
+                const spawnY = Math.max(nextRadius + 4, Math.min(CANVAS_SIZE - nextRadius - 4, ball.y + Math.sin(ang) * offsetDist));
+
+                spawnedSplitBalls.push({
+                  id: Date.now() + Math.random() + sIdx * 0.01,
+                  team: ball.team,
+                  type: BALL_TYPES.MULTI,
+                  name: nextName,
+                  splitStage: nextStage,
+                  config: {
+                    ...(ball.config || BALL_CONFIGS[BALL_TYPES.MULTI]),
+                    name: nextName,
+                    baseHp: nextHp,
+                    radius: nextRadius,
+                    mass: nextMass,
+                    speed: nextSpeed,
+                    damage: nextDamage,
+                    splitStage: nextStage,
+                  },
+                  x: spawnX,
+                  y: spawnY,
+                  angle: ang,
+                  radius: nextRadius,
+                  mass: nextMass,
+                  speed: nextSpeed,
+                  initialSpeed: nextSpeed,
+                  vx: Math.cos(ang) * nextSpeed,
+                  vy: Math.sin(ang) * nextSpeed,
+                  baseHp: nextHp,
+                  maxHp: nextHp,
+                  hp: nextHp,
+                  displayHp: nextHp,
+                  damage: nextDamage,
+                  shield: 0,
+                  hasArmor: false,
+                  hitCount: 0,
+                  bleedTicksLeft: 0,
+                  bleedTimer: 0,
+                  bleedSource: null,
+                  bleedQueue: [],
+                  isDead: false,
+                  isDying: false,
+                  deathTimer: 0,
+                  deathMaxTimer: 0,
+                  hitFlashTimer: 0,
+                  hitShakeTimer: 0,
+                  invulnerableTimer: 280,
+                  multiAngle: ang,
+                  targetRadius: nextRadius,
+                  targetMass: nextMass,
+                  teamColor: ball.teamColor,
+                  teamName: ball.teamName,
+                  totalDamageDealt: 0,
+                  kills: 0,
+                });
+              });
+            } else {
+              sound.play('death', 0.95);
+
+              const deadBodyColor = ball.config?.bodyColor || ball.color || '#ef4444';
+              spawnParticles(ball.x, ball.y, deadBodyColor, 40, 3.6);
+              spawnParticles(ball.x, ball.y, '#f97316', 28, 2.8);
+              spawnParticles(ball.x, ball.y, '#ffffff', 20, 2.2);
+              spawnParticles(ball.x, ball.y, '#ef4444', 22, 2.5);
+            }
           }
           return;
         }
@@ -2010,15 +2187,19 @@ function BallBattleGame() {
           ball.displayHp += (ball.hp - ball.displayHp) * 0.12;
         }
 
-        // Fast Ball subtle faint trail effect
-        if (ball.type === BALL_TYPES.FAST) {
+        // Fast Ball & Multi Ball subtle faint trail effect
+        if (ball.type === BALL_TYPES.FAST || ball.type === BALL_TYPES.MULTI) {
           trailPoints.push({
             x: ball.x,
             y: ball.y,
             radius: ball.radius * 0.85,
-            color: ball.config?.bodyColor || '#38bdf8',
+            color: ball.type === BALL_TYPES.MULTI ? '#c026d3' : (ball.config?.bodyColor || '#38bdf8'),
             life: 0.35, // less visible faint trail
           });
+        }
+
+        if (ball.type === BALL_TYPES.MULTI && !ball.isDead && !ball.isDying) {
+          ball.multiAngle = (ball.multiAngle || 0) + safeDt * 3.4;
         }
 
         // Accelerator Ball: Accelerates continuously the longer the fight endures
@@ -2250,6 +2431,10 @@ function BallBattleGame() {
         }
       });
 
+      if (spawnedSplitBalls.length > 0) {
+        balls.push(...spawnedSplitBalls);
+      }
+
       // Collisions
       for (let i = 0; i < activeBalls.length; i++) {
         for (let j = i + 1; j < activeBalls.length; j++) {
@@ -2292,7 +2477,7 @@ function BallBattleGame() {
                 sound.play('acceleratorHit', 0.9);
               } else if (b1.type === BALL_TYPES.GROW || b2.type === BALL_TYPES.GROW) {
                 sound.play('growHit', 0.85);
-              } else if (b1.type === BALL_TYPES.FAST || b2.type === BALL_TYPES.FAST) {
+              } else if (b1.type === BALL_TYPES.FAST || b2.type === BALL_TYPES.FAST || b1.type === BALL_TYPES.MULTI || b2.type === BALL_TYPES.MULTI) {
                 sound.play('fastballHit', 0.85);
               } else if (b1.type === BALL_TYPES.SPIKE || b2.type === BALL_TYPES.SPIKE) {
                 sound.play('spikeHit', 0.9);
@@ -3033,9 +3218,11 @@ function BallBattleGame() {
                     ? (ball.gunAngle || 0)
                     : (ball.type === BALL_TYPES.THORN
                       ? (ball.thornAngle || 0)
-                      : (ball.type === BALL_TYPES.ACCELERATOR
-                        ? Math.atan2(ball.vy || 0, ball.vx || 1)
-                        : (ball.swordAngle || 0))))))));
+                      : (ball.type === BALL_TYPES.MULTI
+                        ? (ball.multiAngle || 0)
+                        : (ball.type === BALL_TYPES.ACCELERATOR
+                          ? Math.atan2(ball.vy || 0, ball.vx || 1)
+                          : (ball.swordAngle || 0)))))))));
         const config = ball.config || BALL_CONFIGS[ball.type];
 
         const hasTeamMode = (simState === 'planning' ? placedBalls : physicsRef.current.balls)
@@ -3663,6 +3850,22 @@ function BallBattleGame() {
                           Direct body contact inflicts <strong>-2 -1 Bleed</strong>. Whenever the ball impacts arena walls, it sprouts permanent creeping floral Thorns in 3 size variations (S, M, L) that deal <strong>2 damage</strong> and inflict <strong>-1 -1 Bleed</strong> to enemies.
                         </td>
                       </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-split"
+                            onMouseEnter={(e) => showTooltip(e, 'SPLIT')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <SplitIcon size={13} color="#d946ef" /> SPLIT
+                          </span>
+                        </td>
+                        <td className="col-source">Multi Ball Ability</td>
+                        <td className="col-description">
+                          Acts like a Fast Ball with half HP (<strong>50 HP</strong>). Upon death, splits into 2 mini copies with <strong>25 HP Full</strong> each, which subsequently split into 2 micro copies with <strong>10 HP Full</strong> each when defeated.
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -4193,6 +4396,15 @@ function BallBattleGame() {
                                   <ThornIcon size={13} color="#22c55e" /> THORNS
                                 </span>
                               )}
+                              {b.type === BALL_TYPES.MULTI && (
+                                <span
+                                  className="hud-effect-badge multi-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SPLIT')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SplitIcon size={13} color="#d946ef" /> SPLIT
+                                </span>
+                              )}
                             </div>
 
                             {/* In 1v1 mode, render stats below the statuses */}
@@ -4586,6 +4798,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <ThornIcon size={13} color="#22c55e" /> THORNS
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.MULTI && (
+                                <span
+                                  className="hud-effect-badge multi-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SPLIT')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SplitIcon size={13} color="#d946ef" /> SPLIT
                                 </span>
                               )}
                             </div>

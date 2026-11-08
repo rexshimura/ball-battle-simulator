@@ -216,3 +216,15 @@ export function KnifeIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function SplitIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="6.5" cy="12" r="3.5" fill={color} fillOpacity="0.25" />
+      <circle cx="17.5" cy="7" r="2.8" fill={color} fillOpacity="0.25" />
+      <circle cx="17.5" cy="17" r="2.8" fill={color} fillOpacity="0.25" />
+      <path d="M10 10.5l4.5-2.5" />
+      <path d="M10 13.5l4.5 2.5" />
+    </svg>
+  );
+}
