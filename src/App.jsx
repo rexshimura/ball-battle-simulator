@@ -2966,6 +2966,36 @@ function BallBattleGame() {
           }
         }
 
+        // Dice Ball: Fast slot-machine roll shuffle animation & number settling
+        if (ball.type === BALL_TYPES.DICE && !ball.isDead && !ball.isDying) {
+          if (ball.diceRollTimer > 0) {
+            ball.diceRollTimer = Math.max(0, ball.diceRollTimer - safeDt * 1000);
+            // Snappy rapid number shuffle during roll
+            if (Math.random() < 0.65 || ball.displayedDamage === undefined) {
+              if (ball.diceTier === 'high') {
+                ball.displayedDamage = Math.floor(Math.random() * (80 - 50 + 1)) + 50;
+              } else if (ball.diceTier === 'mid') {
+                ball.displayedDamage = Math.floor(Math.random() * (49 - 20 + 1)) + 20;
+              } else {
+                ball.displayedDamage = Math.floor(Math.random() * (19 - 5 + 1)) + 5;
+              }
+            }
+
+            if (ball.diceRollTimer <= 0) {
+              ball.diceRollTimer = 0;
+              ball.damage = ball.diceRollTarget;
+              ball.displayedDamage = ball.diceRollTarget;
+              ball.dicePopScale = 1.45; // punchy bounce on landing
+              const sparkCol = ball.diceTier === 'high' ? '#fbbf24' : (ball.diceTier === 'mid' ? '#38bdf8' : '#cbd5e1');
+              spawnParticles(ball.x, ball.y, sparkCol, 14, 2.2);
+            }
+          }
+
+          if (ball.dicePopScale > 1.0) {
+            ball.dicePopScale = Math.max(1.0, ball.dicePopScale - safeDt * 2.5);
+          }
+        }
+
         // Fire Ball: Literal roaring fire streaming behind motion, dropping persistent burning ground trail
         if (ball.type === BALL_TYPES.FIRE && !ball.isDead && !ball.isDying) {
           ball.fireAngle = (ball.fireAngle || 0) + safeDt * 3.6;
@@ -3575,7 +3605,6 @@ function BallBattleGame() {
 
               // Dice Ball: Roll random damage on enemy collision based on roll sound pitch
               const rollDiceBall = (diceBall) => {
-
                 const roll = Math.random();
                 let tier, targetDmg, sfx;
                 if (roll < 0.25) {
@@ -3595,7 +3624,8 @@ function BallBattleGame() {
                 sound.play(sfx, 0.95);
                 diceBall.diceTier = tier;
                 diceBall.diceRollTarget = targetDmg;
-                diceBall.diceRollTimer = 750;
+                diceBall.damage = targetDmg;
+                diceBall.diceRollTimer = 260; // snappy roll duration so number is locked in before next hit
                 diceBall.dicePopScale = 1.35;
                 spawnParticles(diceBall.x, diceBall.y, tier === 'high' ? '#f59e0b' : (tier === 'mid' ? '#06b6d4' : '#94a3b8'), 10, 2.0);
               };
@@ -3606,18 +3636,21 @@ function BallBattleGame() {
 
                 if (b1.diceHits === 1) {
                   // Hit 1: deals default 1 damage, does not roll yet
+                  dmgB1ToB2 = 1;
                   b1.dicePopScale = 1.25;
                   spawnParticles(b1.x, b1.y, '#94a3b8', 6, 1.5);
                 } else if (b1.diceHits === 2) {
-                  // Hit 2: deals default 1 damage, initiates first lucky roll for subsequent hits!
+                  // Hit 2: deals default 1 damage, hits twice reached! Rolls lucky number for next attack!
+                  dmgB1ToB2 = 1;
                   rollDiceBall(b1);
                 } else {
-                  // Hit 3+: deals previously rolled damage, then rolls next lucky number!
+                  // Hit 3+: finalize roll if still active so displayed damage is exact
                   if (b1.diceRollTimer > 0) {
+                    b1.diceRollTimer = 0;
                     b1.damage = b1.diceRollTarget;
                     b1.displayedDamage = b1.diceRollTarget;
-                    dmgB1ToB2 = b1.damage;
                   }
+                  dmgB1ToB2 = b1.damage;
                   rollDiceBall(b1);
                 }
               }
@@ -3627,16 +3660,19 @@ function BallBattleGame() {
                 sound.play('diceHit', 0.85);
 
                 if (b2.diceHits === 1) {
+                  dmgB2ToB1 = 1;
                   b2.dicePopScale = 1.25;
                   spawnParticles(b2.x, b2.y, '#94a3b8', 6, 1.5);
                 } else if (b2.diceHits === 2) {
+                  dmgB2ToB1 = 1;
                   rollDiceBall(b2);
                 } else {
                   if (b2.diceRollTimer > 0) {
+                    b2.diceRollTimer = 0;
                     b2.damage = b2.diceRollTarget;
                     b2.displayedDamage = b2.diceRollTarget;
-                    dmgB2ToB1 = b2.damage;
                   }
+                  dmgB2ToB1 = b2.damage;
                   rollDiceBall(b2);
                 }
               }
