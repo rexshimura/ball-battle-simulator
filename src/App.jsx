@@ -459,37 +459,74 @@ const FIRE_HISTORY_LEN = 16;
 
 // Cel-shaded fireball: flat colour bands (dark ember → orange → yellow → white-hot) built from
 // unioned circles along the ball's path history. One fill per band = smooth & cheap (no gradients).
-function drawCelFireball(ctx, x, y, radius, history, puffs, isHit, isLight) {
+function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight) {
   const now = performance.now() * 0.001;
   const N = FIRE_HISTORY_LEN;
+  const vx = motionVector?.vx || 0;
+  const vy = motionVector?.vy || 0;
+  const spd = Math.hypot(vx, vy);
+  const isMoving = spd > 0.15;
+  const history = motionVector?.history || null;
+  const puffs = motionVector?.puffs || null;
+
   const hasHist = history && history.length > 0;
   const shiftX = hasHist ? x - history[0].x : 0;
   const shiftY = hasHist ? y - history[0].y : 0;
   const maxStep = radius * 0.32;
 
-  // Build spine points: head at the ball, tail follows history, older points rise (buoyancy)
+  // Build spine points: head at the ball, tail follows path history behind motion
   const pts = [];
-  for (let i = 0; i < N; i++) {
-    const t = i / (N - 1);
-    const h = hasHist ? history[Math.min(i, history.length - 1)] : null;
-    let px = h ? h.x + shiftX : x;
-    let py = h ? h.y + shiftY : y;
-    py -= i * radius * 0.085;
-    px += Math.sin(now * 9 + i * 0.8) * radius * 0.13 * t;
-    py += Math.cos(now * 7 + i * 1.1) * radius * 0.06 * t;
 
-    // Keep the tail compact at very high speeds
-    if (i > 0) {
-      const prev = pts[i - 1];
-      const dx = px - prev.x;
-      const dy = py - prev.y;
-      const d = Math.hypot(dx, dy);
-      if (d > maxStep) {
-        px = prev.x + (dx / d) * maxStep;
-        py = prev.y + (dy / d) * maxStep;
+  if (isMoving) {
+    // In motion: tail follows historical path strictly behind motion, bending & curving on bounces
+    // NO upward buoyancy when match is playing
+    const backDirX = -vx / spd;
+    const backDirY = -vy / spd;
+    const perpX = -backDirY;
+    const perpY = backDirX;
+
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      let px, py;
+      if (hasHist && i < history.length) {
+        const h = history[i];
+        px = h.x + shiftX;
+        py = h.y + shiftY;
+      } else {
+        // Fallback / initial launch step: stream backward along velocity
+        const prev = pts[i - 1] || { x, y };
+        px = prev.x + backDirX * Math.min(maxStep, radius * 0.22);
+        py = prev.y + backDirY * Math.min(maxStep, radius * 0.22);
       }
+
+      // Compactness constraint
+      if (i > 0) {
+        const prev = pts[i - 1];
+        const dx = px - prev.x;
+        const dy = py - prev.y;
+        const d = Math.hypot(dx, dy);
+        if (d > maxStep) {
+          px = prev.x + (dx / d) * maxStep;
+          py = prev.y + (dy / d) * maxStep;
+        }
+      }
+
+      // Dynamic sideways flutter perpendicular to path
+      const flutter = Math.sin(now * 14 + i * 0.85) * (radius * 0.1 * t);
+      px += perpX * flutter;
+      py += perpY * flutter;
+
+      pts.push({ x: px, y: py, t, i });
     }
-    pts.push({ x: px, y: py, t, i });
+  } else {
+    // Stationary (planning screen / roster preview / idle before launch):
+    // Flame naturally rises straight UPWARDS (-y)
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      const px = x + Math.sin(now * 8 + i * 0.8) * (radius * 0.12 * t);
+      const py = y - (i * radius * 0.16) + Math.cos(now * 6 + i * 1.1) * (radius * 0.05 * t);
+      pts.push({ x: px, y: py, t, i });
+    }
   }
 
   const colors = isHit
@@ -969,8 +1006,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       x,
       y,
       radius,
-      motionVector?.history || null,
-      motionVector?.puffs || null,
+      motionVector,
       isHit,
       isLight
     );
@@ -1676,6 +1712,11 @@ function BallBattleGame() {
         growDelayTimer: 0,
         hasTriggeredGrowFx: false,
         missingNotches: [],
+        fireHistory: b.type === BALL_TYPES.FIRE ? Array.from({ length: 16 }, (_, idx) => ({
+          x: b.x - Math.cos(b.angle) * (idx * (b.radius * 0.22)),
+          y: b.y - Math.sin(b.angle) * (idx * (b.radius * 0.22)),
+        })) : [],
+        firePuffs: [],
         totalDamageDealt: 0,
         kills: 0,
       };
@@ -2422,13 +2463,13 @@ function BallBattleGame() {
           const tailPt = ball.fireHistory[Math.min(ball.fireHistory.length - 1, 7)];
           if (Math.random() < 0.35) {
             ball.firePuffs.push({
-              x: tailPt.x + (Math.random() - 0.5) * ball.radius * 0.9,
-              y: tailPt.y + (Math.random() - 0.5) * ball.radius * 0.9 - ball.radius * 0.4,
-              vx: (Math.random() - 0.5) * 0.6 - ball.vx * 0.08,
-              vy: -0.5 - Math.random() * 0.7,
+              x: tailPt.x + (Math.random() - 0.5) * ball.radius * 0.7,
+              y: tailPt.y + (Math.random() - 0.5) * ball.radius * 0.7,
+              vx: -ball.vx * 0.12 + (Math.random() - 0.5) * 0.5,
+              vy: -ball.vy * 0.12 + (Math.random() - 0.5) * 0.5,
               r: ball.radius * (0.16 + Math.random() * 0.2),
               life: 1.0,
-              decay: 0.03 + Math.random() * 0.025,
+              decay: 0.035 + Math.random() * 0.025,
             });
           }
           for (let pi = ball.firePuffs.length - 1; pi >= 0; pi--) {
