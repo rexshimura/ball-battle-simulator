@@ -31,4 +31,12 @@ An arcade-style 2D physics battle simulator built with React 19, HTML5 Canvas, W
   - **L (~96px)**: Braided tree-like vine with lateral shoots and crimson wild rose blossom.
 - Features continuous segment collision detection (`distToSegment`) dealing 2 damage and -1 -1 Bleed to trespassing enemies.
 
+## Visual & Audio Systems
+
+- **WebGL LaserFlow Victory Aura**: Real-time GLSL shader that tracks the solo champion ball and cradles it dead-center in a golden teardrop aura with organic particle dust and light blooms.
+- **Combat Telemetry & HUDs**: Real-time HP bars, damage dealt counters, dynamic status effect badges, and detailed round victory summaries.
+- **Interactive Effects Codex**: Searchable in-game reference modal detailing all active skills, passive traits, and status ailments.
+- **Audio Sound Manager**: Multi-channel audio pooling with intelligent cooldown throttling to eliminate clipping during intense multi-ball clashes.
+
+
 
