@@ -98,7 +98,7 @@ export const BALL_CONFIGS = {
   [BALL_TYPES.STEEL]: {
     id: BALL_TYPES.STEEL,
     name: 'Steel Ball',
-    rarity: RARITIES.UNCOMMON,
+    rarity: RARITIES.RARE,
     description: 'Gains a kinetic energy barrier shield (+20 Shield) every 4 hits taken.',
     baseHp: 100,
     damage: 11,
@@ -199,7 +199,7 @@ export const BALL_CONFIGS = {
   [BALL_TYPES.KNIFE]: {
     id: BALL_TYPES.KNIFE,
     name: 'Knife Ball',
-    rarity: RARITIES.RARE,
+    rarity: RARITIES.UNCOMMON,
     description: 'Equipped with a compact combat knife that spins rapidly at double speed, slashing nearby enemies in close quarters.',
     baseHp: 100,
     damage: 7,         // Body hitbox deals lower bump damage

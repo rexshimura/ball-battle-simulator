@@ -58,8 +58,8 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 *6 rarity tiers available — with more ball classes actively on the way!*
 
 - **⚪ Common**: `Normal Ball` `Fast Ball` `Big Ball`
-- **🟢 Uncommon**: `Stone Ball` `Steel Ball` `Sword Ball` `Spike Ball`
-- **🔵 Rare**: `Glass Ball` `Hammer Ball` `Grow Ball` `Knife Ball`
+- **🟢 Uncommon**: `Stone Ball` `Knife Ball` `Sword Ball` `Spike Ball`
+- **🔵 Rare**: `Steel Ball` `Glass Ball` `Hammer Ball` `Grow Ball`
 - **🟣 Unique**: `Accelerator Ball` `Gun Ball` `Multi Ball`
 - **🌸 Epic**: `Shard Ball` `Thorn Ball`
 - **🔥 Legendary**: `Fire Ball` *(and more to come...)*
