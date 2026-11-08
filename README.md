@@ -150,4 +150,4 @@ Open your browser at `http://localhost:5173` to play!
 ---
 
 ## 📜 License
-Distributed under the MIT License. Built with passion for retro arcade physics and battle simulators.
+Distributed under the **Apache License 2.0**. See [`LICENSE`](./LICENSE) for full terms and conditions. Built with passion for retro arcade physics and battle simulators.
