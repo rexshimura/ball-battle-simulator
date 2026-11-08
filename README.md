@@ -46,26 +46,21 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 
 ## 🔮 Ball Classes & Rarity Tiers
 
-Combatants in Ball Battle Simulator are categorized into **5 distinct rarity tiers**, spanning agile baseline brawlers, armored tanks, kinetic speedsters, artillery cannons, and botanical hazard planters — **with many more ball classes and abilities actively on the way!**
+*5 rarity tiers available — with more ball classes actively on the way!*
 
-- **⚪ Common**: Baseline combatants (e.g., *Normal*, *Fast*, *Big*) ideal for frontline engagements, rapid scouting, and momentum-based swarms.
-- **🟢 Uncommon**: Armored units and blade specialists (e.g., *Stone*, *Steel*, *Sword*, *Spike*) featuring kinetic shields, puncture spikes, and bleed immunity.
-- **🔵 Rare**: Tactical fighters and scaling behemoths (e.g., *Glass*, *Hammer*, *Grow*, *Knife*) equipped with brittle shard bursts, heavy knockback warhammers, rapid combat knives, and dynamic size growth.
-- **🟣 Unique**: Advanced weapon systems and scaling speedsters (e.g., *Accelerator*, *Shard*, *Gun*) featuring velocity-scaled kinetic damage, homing crystal volleys, and rotating high-caliber firearms.
-- **🌸 Epic**: Masters of environmental warfare (e.g., *Thorn*) capable of permanently claiming the arena perimeter with creeping floral vines and lethal bleed ailments.
-
-> 💡 *You can inspect every unit's live combat stats, passives, and weapon scaling at any time during gameplay via the in-game **Effects & Weapons Codex**!*
+- **⚪ Common**: `Normal Ball` `Fast Ball` `Big Ball`
+- **🟢 Uncommon**: `Stone Ball` `Steel Ball` `Sword Ball` `Spike Ball`
+- **🔵 Rare**: `Glass Ball` `Hammer Ball` `Grow Ball` `Knife Ball`
+- **🟣 Unique**: `Accelerator Ball` `Shard Ball` `Gun Ball`
+- **🌸 Epic**: `Thorn Ball` *(and more to come...)*
 
 ---
 
 ## ⚡ Status Effects & Combat Mechanics
 
-- **🩸 Bleed**: True damage ticks dealt directly to unit health over time. Armored units (Stone, Spike, Steel) resist or mitigate bleed effects.
-- **🛡️ Shield**: Extra temporary barrier points that absorb incoming damage before touching baseline health.
-- **🏋️ Heavy**: High-density chassis that resists knockback displacement, standard on Stone Ball and earned by Grow Ball upon expanding past 2.8 size (+30% HP boost).
-- **🚀 Accelerate**: Dynamic kinetic state where collision damage rises in direct proportion to current velocity.
-- **🎯 Shard Target**: Locks an enemy as the target for consecutive homing crystal volleys.
-- **🌿 Thorns Hazard**: Permanent creeping botanical traps anchored to perimeter walls that reach into the arena, damaging and bleeding enemy units that cross their path.
+`🩸 Bleed` &nbsp; `🛡️ Shield` &nbsp; `🏋️ Heavy` &nbsp; `🚀 Accelerate` &nbsp; `🎯 Shard Target` &nbsp; `🌿 Thorns`
+
+> 💡 *Jump into the simulator and open the in-game **Effects & Weapons Codex** to explore full stats, scaling mechanics, and hidden unit passives!*
 
 ---
 
