@@ -138,7 +138,7 @@ const EFFECT_TOOLTIPS = {
     title: 'FLAMING',
     category: 'EFFECT TAG',
     icon: <FlameIcon size={14} color="#f97316" />,
-    description: 'Imbued with perpetual celestial fire. Radiates an intense heat corona, leaves fiery ember trails, and ignites struck enemies with Burn.',
+    description: 'Imbued with perpetual celestial fire. Radiates an intense heat corona, leaves fiery ground trails, ignites struck enemies with Burn, and incinerates enemy Thorn Traps on contact.',
   },
   BURN: {
     title: 'BURN',
@@ -3192,6 +3192,34 @@ function BallBattleGame() {
 
               const dist = distToSegment(ball.x, ball.y, trap.x, trap.y, tipX, tipY);
               if (dist < ball.radius + (trap.widthRadius || 16)) {
+                // Fire Ball incinerates and completely destroys the Thorn Trap on contact!
+                if (ball.type === BALL_TYPES.FIRE) {
+                  sound.play('fireballBurn', 0.95);
+                  const hitMidX = (trap.x + tipX) / 2;
+                  const hitMidY = (trap.y + tipY) / 2;
+                  // Explosive incineration sparks & burnt charcoal ash
+                  spawnParticles(hitMidX, hitMidY, '#f97316', 16, 2.0);
+                  spawnParticles(hitMidX, hitMidY, '#fef08a', 8, 2.2);
+                  spawnParticles(hitMidX, hitMidY, '#7c2d12', 8, 1.4); // burnt charcoal ash
+                  spawnParticles(hitMidX, hitMidY, '#15803d', 6, 1.2); // scorched leaves
+
+                  // Searing thermal blast wave
+                  physicsRef.current.fireImpacts.push({
+                    x: hitMidX,
+                    y: hitMidY,
+                    radius: 8,
+                    maxRadius: 36,
+                    life: 0.9,
+                    decay: 0.045,
+                    rot: Math.random() * Math.PI * 2,
+                  });
+
+                  // Destroy and remove the thorn trap from the arena
+                  thornTraps.splice(tIdx, 1);
+                  tIdx--;
+                  break;
+                }
+
                 if (!trap.cooldowns[ball.id] || trap.cooldowns[ball.id] <= 0) {
                   trap.cooldowns[ball.id] = 420; // 420ms tick cooldown per enemy
                   applyDamage(ball, trap.damage || 2, trap.owner || ball, false);
@@ -4371,7 +4399,7 @@ function BallBattleGame() {
                         </td>
                         <td className="col-source">Fire Ball Innate Trait</td>
                         <td className="col-description">
-                          Self-imbued fiery aura radiating heat. Radiates dynamic outer flames, leaves an ember trail, and ignites struck enemies with Burn.
+                          Self-imbued fiery aura radiating heat. Radiates dynamic directional flames, leaves a burning ground trail, ignites struck enemies with Burn, and incinerates enemy Thorn Traps on contact.
                         </td>
                       </tr>
 
