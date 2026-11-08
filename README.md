@@ -61,8 +61,8 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 - **🟢 Uncommon**: `Stone Ball` `Heal Ball` `Knife Ball` `Sword Ball` `Spike Ball`
 - **🔵 Rare**: `Steel Ball` `Glass Ball` `Hammer Ball` `Grow Ball`
 - **🟣 Unique**: `Accelerator Ball` `Gun Ball` `Multi Ball`
-- **🌸 Epic**: `Shard Ball` `Thorn Ball`
-- **🔥 Legendary**: `Fire Ball` *(and more to come...)*
+- **🌸 Epic**: `Shard Ball` `Sniper Ball`
+- **🔥 Legendary**: `Thorn Ball` `Fire Ball` *(and more to come...)*
 
 ---
 

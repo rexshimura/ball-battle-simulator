@@ -26,9 +26,10 @@ export const BALL_TYPES = {
 
   // Epic
   SHARD: 'SHARD',
-  THORN: 'THORN',
+  SNIPER: 'SNIPER',
 
   // Legendary
+  THORN: 'THORN',
   FIRE: 'FIRE',
 };
 
@@ -342,10 +343,33 @@ export const BALL_CONFIGS = {
     special: 'Shard',
     inflicts: 'Shard Target',
   },
+  [BALL_TYPES.SNIPER]: {
+    id: BALL_TYPES.SNIPER,
+    name: 'Sniper Ball',
+    rarity: RARITIES.EPIC,
+    description: 'Mounted with a long-range tactical sniper rifle. Periodically freezes in midair to lock its precision laser sight onto an enemy, then discharges a devastating 45 DMG armor-piercing sniper bullet.',
+    baseHp: 100,
+    damage: 8,
+    speed: 2.1,
+    radius: 38,
+    mass: 1.05,
+    bulletDamage: 45,
+    sniperCooldown: 4000,
+    aimDuration: 1200,
+    bodyColor: '#1e293b',      // Matte tactical slate
+    highlightColor: '#38bdf8', // Precision cyan laser optic sheen
+    shadowColor: '#090d16',    // Deep stealth black shadow
+    barrelColor: '#0f172a',
+    special: 'Lock-On Sniper (4s Cooldown)',
+  },
+
+  // ==========================================
+  // LEGENDARY TIER
+  // ==========================================
   [BALL_TYPES.THORN]: {
     id: BALL_TYPES.THORN,
     name: 'Thorn Ball',
-    rarity: RARITIES.EPIC,
+    rarity: RARITIES.LEGENDARY,
     description: 'Direct body contact inflicts -2 -1 Bleed. Bouncing off walls sprouts permanent creeping floral Thorns (S, M, L) that deal 2 damage and inflict -1 -1 Bleed.',
     baseHp: 100,
     damage: 8,
@@ -359,10 +383,6 @@ export const BALL_CONFIGS = {
     special: 'Thorns & Bleed',
     trapDamage: 2,
   },
-
-  // ==========================================
-  // LEGENDARY TIER
-  // ==========================================
   [BALL_TYPES.FIRE]: {
     id: BALL_TYPES.FIRE,
     name: 'Fire Ball',

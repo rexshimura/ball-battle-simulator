@@ -37,6 +37,7 @@ const SFX_FILES = {
   fireballLoop: '/sfx/sfx-ball-fireball-passive-sound-loop.mp3',
   gameStart: '/sfx/sfx-game-start.mp3',
   heal: '/sfx/sfx-ball-heal.mp3',
+  sniperAimAndShoot: '/sfx/sfx-ball-sniper-aim-and-shoot.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound

@@ -255,3 +255,17 @@ export function HealIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function SniperIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" strokeWidth="1.8" />
+      <line x1="12" y1="1" x2="12" y2="7" />
+      <line x1="12" y1="17" x2="12" y2="23" />
+      <line x1="1" y1="12" x2="7" y2="12" />
+      <line x1="17" y1="12" x2="23" y2="12" />
+      <circle cx="12" cy="12" r="0.8" fill={color} />
+    </svg>
+  );
+}

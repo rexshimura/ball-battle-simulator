@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -151,6 +151,12 @@ const EFFECT_TOOLTIPS = {
     category: 'ABILITY TAG',
     icon: <HealIcon size={14} color="#10b981" />,
     description: 'Periodically pulses restorative green energy every 6 seconds, regenerating +5 HP to itself in combat.',
+  },
+  SNIPER: {
+    title: 'SNIPER LOCK-ON',
+    category: 'ABILITY TAG',
+    icon: <SniperIcon size={14} color="#38bdf8" />,
+    description: 'Periodically freezes in midair to lock a precision laser sight onto the nearest enemy, discharging a devastating 45 DMG armor-piercing sniper round.',
   },
 };
 
@@ -965,7 +971,86 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     ctx.restore();
   }
 
-  // 6 floating ready crystal shards orbiting Shard Ball
+  // Long tactical sniper rifle barrel & precision scope for Sniper Ball
+  if (config.id === BALL_TYPES.SNIPER) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotationAngle);
+
+    const scale = radius / (config.radius || 38);
+    const barrelLen = 30 * scale;
+    const barrelWidth = Math.max(3, 5.5 * scale);
+    const mountX = radius - 3 * scale;
+
+    // Laser aiming guide / sight line extending forward
+    if (radius > 25) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(mountX + barrelLen, 0);
+      ctx.lineTo(mountX + barrelLen + 65, 0);
+      ctx.strokeStyle = isLight ? 'rgba(2, 132, 199, 0.65)' : 'rgba(56, 189, 248, 0.85)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Long fluted rifle barrel
+    ctx.fillStyle = isHit ? '#ffffff' : (isLight ? '#1e293b' : '#0f172a');
+    ctx.fillRect(mountX, -barrelWidth / 2, barrelLen, barrelWidth);
+    ctx.strokeStyle = isLight ? '#0f172a' : '#38bdf8';
+    ctx.lineWidth = Math.max(1, 1.2 * scale);
+    ctx.strokeRect(mountX, -barrelWidth / 2, barrelLen, barrelWidth);
+
+    // Muzzle Brake / Suppressor at tip
+    const brakeW = Math.max(3, 5 * scale);
+    const brakeH = barrelWidth + 3.5 * scale;
+    ctx.fillStyle = isHit ? '#ffffff' : (isLight ? '#0f172a' : '#1e293b');
+    ctx.fillRect(mountX + barrelLen - brakeW, -brakeH / 2, brakeW, brakeH);
+    ctx.strokeStyle = isLight ? '#020617' : '#7dd3fc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(mountX + barrelLen - brakeW, -brakeH / 2, brakeW, brakeH);
+
+    // Tactical High-Magnification Sniper Scope mounted on top
+    const scopeW = 16 * scale;
+    const scopeH = Math.max(3, 4.5 * scale);
+    const scopeX = mountX + 4 * scale;
+    const scopeY = -barrelWidth / 2 - scopeH - 1.5 * scale;
+
+    // Scope Mount Rings
+    ctx.fillStyle = isLight ? '#334155' : '#64748b';
+    ctx.fillRect(scopeX + 2, scopeY + scopeH, 2.5 * scale, 1.5 * scale);
+    ctx.fillRect(scopeX + scopeW - 4.5 * scale, scopeY + scopeH, 2.5 * scale, 1.5 * scale);
+
+    // Scope Body Tube
+    ctx.fillStyle = isHit ? '#ffffff' : (isLight ? '#0f172a' : '#1e293b');
+    ctx.fillRect(scopeX, scopeY, scopeW, scopeH);
+    ctx.strokeStyle = isLight ? '#020617' : '#38bdf8';
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(scopeX, scopeY, scopeW, scopeH);
+
+    // Scope Lens Eyepiece & Objective Bells
+    ctx.fillStyle = isHit ? '#ffffff' : '#0284c7';
+    ctx.fillRect(scopeX + scopeW - 1, scopeY - 0.8, 2.5 * scale, scopeH + 1.6);
+    ctx.fillRect(scopeX - 1.5 * scale, scopeY - 0.5, 2 * scale, scopeH + 1);
+
+    // Scope Lens Glint
+    ctx.fillStyle = '#7dd3fc';
+    ctx.beginPath();
+    ctx.arc(scopeX + scopeW, scopeY + scopeH / 2, 1.2 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Chamber / Pivot Mount
+    ctx.beginPath();
+    ctx.arc(mountX, 0, Math.max(3, 5 * scale), 0, Math.PI * 2);
+    ctx.fillStyle = isHit ? '#ffffff' : '#0284c7'; // cyan tactical pivot
+    ctx.fill();
+    ctx.strokeStyle = isLight ? '#0369a1' : '#bae6fd';
+    ctx.lineWidth = Math.max(0.8, 1.2 * scale);
+    ctx.stroke();
+
+    ctx.restore();
+  }
   if (config.id === BALL_TYPES.SHARD) {
     const orbitCount = 6;
     for (let s = 0; s < orbitCount; s++) {
@@ -1359,6 +1444,58 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
+    // Sniper Ball: Tactical rangefinder mil-dot reticle etched across the dark sphere
+    if (config.id === BALL_TYPES.SNIPER) {
+      ctx.save();
+      ctx.clip();
+
+      // Outer precision reticle ring
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.58, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner target ring
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Mil-dot crosshair lines
+      ctx.beginPath();
+      ctx.moveTo(x - radius * 0.72, y);
+      ctx.lineTo(x + radius * 0.72, y);
+      ctx.moveTo(x, y - radius * 0.72);
+      ctx.lineTo(x, y + radius * 0.72);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+
+      // Mil-dot elevation and windage ticks
+      [-0.45, -0.18, 0.18, 0.45].forEach(pos => {
+        ctx.beginPath();
+        ctx.moveTo(x + pos * radius, y - 2);
+        ctx.lineTo(x + pos * radius, y + 2);
+        ctx.moveTo(x - 2, y + pos * radius);
+        ctx.lineTo(x + 2, y + pos * radius);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // Glowing center optic dot
+      ctx.beginPath();
+      ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = '#0284c7';
+      ctx.shadowBlur = 6;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
     // Thorn Ball: Woven bramble lattice with 3D forward-facing thorns & velvet briar rosebuds
     if (config.id === BALL_TYPES.THORN) {
       ctx.save();
@@ -1600,7 +1737,7 @@ function BallThumbnailPreview({ config, theme }) {
     const isFire = config.id === BALL_TYPES.FIRE;
     const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
     const previewY = isFire ? 44 : 32;
-    const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0))));
+    const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0)))));
     draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 });
   }, [config, theme]);
 
@@ -1857,6 +1994,13 @@ function BallBattleGame() {
         gunAngle: b.angle || 0,
         gunSpeed: 0.045,
         gunCooldown: 3000,
+        sniperAngle: b.angle || 0,
+        sniperCooldown: 4000,
+        sniperState: 'roam',
+        sniperAimTimer: 0,
+        targetBallId: null,
+        targetX: 0,
+        targetY: 0,
         thornAngle: b.angle || 0,
         multiAngle: b.angle || 0,
         fireAngle: b.angle || 0,
@@ -2855,6 +2999,105 @@ function BallBattleGame() {
           }
         }
 
+        // Sniper Ball: Stops midair, locks precision laser onto target, and shoots
+        if (ball.type === BALL_TYPES.SNIPER && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          if (ball.sniperCooldown === undefined) ball.sniperCooldown = 4000;
+          if (ball.sniperState === undefined) ball.sniperState = 'roam';
+
+          // Find nearest living enemy ball
+          let nearestEnemy = null;
+          let minEnemyDist = Infinity;
+          physicsRef.current.balls.forEach(other => {
+            if (other.team !== ball.team && !other.isDead && !other.isDying) {
+              const d = Math.hypot(other.x - ball.x, other.y - ball.y);
+              if (d < minEnemyDist) {
+                minEnemyDist = d;
+                nearestEnemy = other;
+              }
+            }
+          });
+
+          if (ball.sniperState === 'aiming') {
+            // STOP MIDAIR: freezes in place while aiming and locking on
+            ball.vx = 0;
+            ball.vy = 0;
+
+            if (nearestEnemy) {
+              ball.targetBallId = nearestEnemy.id;
+              ball.targetX = nearestEnemy.x;
+              ball.targetY = nearestEnemy.y;
+
+              const targetAngle = Math.atan2(nearestEnemy.y - ball.y, nearestEnemy.x - ball.x);
+              let diff = (targetAngle - (ball.sniperAngle || 0)) % (Math.PI * 2);
+              if (diff > Math.PI) diff -= Math.PI * 2;
+              if (diff < -Math.PI) diff += Math.PI * 2;
+              ball.sniperAngle = (ball.sniperAngle || 0) + diff * Math.min(1, safeDt * 14);
+            }
+
+            ball.sniperAimTimer -= safeDt * 1000;
+
+            const scale = ball.radius / 38;
+            const muzzleDist = ball.radius + 30 * scale;
+            const mx = ball.x + Math.cos(ball.sniperAngle) * muzzleDist;
+            const my = ball.y + Math.sin(ball.sniperAngle) * muzzleDist;
+
+            if (Math.random() < 0.45) {
+              spawnParticles(mx, my, '#38bdf8', 2, 1.0);
+            }
+
+            // SHOOT WHEN AIM IS COMPLETE!
+            if (ball.sniperAimTimer <= 0) {
+              ball.sniperState = 'roam';
+              ball.sniperCooldown = ball.config?.sniperCooldown || 4000;
+
+              const bulletSpeed = 19;
+              physicsRef.current.flyingBullets.push({
+                x: mx,
+                y: my,
+                vx: Math.cos(ball.sniperAngle) * bulletSpeed,
+                vy: Math.sin(ball.sniperAngle) * bulletSpeed,
+                angle: ball.sniperAngle,
+                ownerId: ball.id,
+                ownerTeam: ball.team,
+                ownerBall: ball,
+                damage: ball.config?.bulletDamage || 45,
+                life: 2.2,
+                radius: 6,
+                isSniper: true,
+              });
+
+              spawnParticles(mx, my, '#38bdf8', 16, 3.0);
+              spawnParticles(mx, my, '#ffffff', 8, 2.2);
+              spawnParticles(mx, my, '#0284c7', 6, 1.8);
+
+              // Recoil kickback!
+              ball.vx = -Math.cos(ball.sniperAngle) * 3.6;
+              ball.vy = -Math.sin(ball.sniperAngle) * 3.6;
+            }
+          } else {
+            // Roaming state
+            if (nearestEnemy) {
+              const targetAngle = Math.atan2(nearestEnemy.y - ball.y, nearestEnemy.x - ball.x);
+              let diff = (targetAngle - (ball.sniperAngle || 0)) % (Math.PI * 2);
+              if (diff > Math.PI) diff -= Math.PI * 2;
+              if (diff < -Math.PI) diff += Math.PI * 2;
+              ball.sniperAngle = (ball.sniperAngle || 0) + diff * Math.min(1, safeDt * 4.0);
+            } else {
+              ball.sniperAngle = ((ball.sniperAngle || 0) + 0.02) % (Math.PI * 2);
+            }
+
+            ball.sniperCooldown -= safeDt * 1000;
+            if (ball.sniperCooldown <= 0 && nearestEnemy) {
+              // Trigger aim state & audio
+              ball.sniperState = 'aiming';
+              ball.sniperAimTimer = ball.config?.aimDuration || 1200;
+              ball.vx = 0;
+              ball.vy = 0;
+              sound.play('sniperAimAndShoot', 0.95);
+            }
+          }
+        }
+
         // Thorn Ball: Smooth spin of organic brambles
         if (ball.type === BALL_TYPES.THORN && !ball.isDead && !ball.isDying) {
           ball.thornAngle = ((ball.thornAngle || 0) + 0.02) % (Math.PI * 2);
@@ -3763,52 +4006,152 @@ function BallBattleGame() {
         });
       }
 
-      // Render heavy flying bullets from Gun Ball
+      // Render heavy flying bullets from Gun Ball & Sniper Ball
       if (simState !== 'planning' && physicsRef.current.flyingBullets) {
         physicsRef.current.flyingBullets.forEach(fb => {
           ctx.save();
           ctx.translate(fb.x, fb.y);
           ctx.rotate(Math.atan2(fb.vy, fb.vx));
 
-          // Bullet trail / fiery tracer streak
-          const tracerGrad = ctx.createLinearGradient(-18, 0, 0, 0);
-          tracerGrad.addColorStop(0, 'rgba(249, 115, 22, 0)');
-          tracerGrad.addColorStop(0.5, 'rgba(251, 191, 36, 0.45)');
-          tracerGrad.addColorStop(1, 'rgba(255, 255, 255, 0.95)');
-          ctx.strokeStyle = tracerGrad;
-          ctx.lineWidth = 3.5;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          ctx.moveTo(-18, 0);
-          ctx.lineTo(0, 0);
-          ctx.stroke();
+          if (fb.isSniper) {
+            // Electric supersonic cyan sniper tracer
+            const tracerGrad = ctx.createLinearGradient(-36, 0, 0, 0);
+            tracerGrad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+            tracerGrad.addColorStop(0.5, 'rgba(56, 189, 248, 0.7)');
+            tracerGrad.addColorStop(1, '#ffffff');
+            ctx.strokeStyle = tracerGrad;
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-36, 0);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
 
-          // High-caliber brass bullet body
-          ctx.shadowColor = '#f59e0b';
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = '#fbbf24';
-          ctx.beginPath();
-          ctx.moveTo(6, 0);
-          ctx.lineTo(0, -3.5);
-          ctx.lineTo(-6, -3.5);
-          ctx.lineTo(-6, 3.5);
-          ctx.lineTo(0, 3.5);
-          ctx.closePath();
-          ctx.fill();
+            // Armor-piercing projectile body
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = '#f0f9ff';
+            ctx.beginPath();
+            ctx.moveTo(10, 0);
+            ctx.lineTo(0, -3.5);
+            ctx.lineTo(-9, -3.5);
+            ctx.lineTo(-9, 3.5);
+            ctx.lineTo(0, 3.5);
+            ctx.closePath();
+            ctx.fill();
 
-          // Copper jacket nose
-          ctx.fillStyle = '#f97316';
-          ctx.beginPath();
-          ctx.arc(1, 0, 3, -Math.PI / 2, Math.PI / 2);
-          ctx.fill();
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
 
-          // Bright incandescent core
-          ctx.fillStyle = '#ffffff';
-          ctx.beginPath();
-          ctx.arc(2, 0, 1.5, 0, Math.PI * 2);
-          ctx.fill();
+            // Supersonic core glint
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(4, 0, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(5, 0, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            // Bullet trail / fiery tracer streak
+            const tracerGrad = ctx.createLinearGradient(-18, 0, 0, 0);
+            tracerGrad.addColorStop(0, 'rgba(249, 115, 22, 0)');
+            tracerGrad.addColorStop(0.5, 'rgba(251, 191, 36, 0.45)');
+            tracerGrad.addColorStop(1, 'rgba(255, 255, 255, 0.95)');
+            ctx.strokeStyle = tracerGrad;
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(-18, 0);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+
+            // High-caliber brass bullet body
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath();
+            ctx.moveTo(6, 0);
+            ctx.lineTo(0, -3.5);
+            ctx.lineTo(-6, -3.5);
+            ctx.lineTo(-6, 3.5);
+            ctx.lineTo(0, 3.5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Copper jacket nose
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(1, 0, 3, -Math.PI / 2, Math.PI / 2);
+            ctx.fill();
+
+            // Bright incandescent core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(2, 0, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
           ctx.restore();
+        });
+      }
+
+      // Render active Sniper Ball laser sights and lock-on reticles
+      if (simState !== 'planning') {
+        physicsRef.current.balls.forEach(b => {
+          if (b.type === BALL_TYPES.SNIPER && b.sniperState === 'aiming' && !b.isDead && !b.isDying) {
+            const scale = b.radius / 38;
+            const muzzleDist = b.radius + 30 * scale;
+            const mx = b.x + Math.cos(b.sniperAngle) * muzzleDist;
+            const my = b.y + Math.sin(b.sniperAngle) * muzzleDist;
+            const tx = b.targetX;
+            const ty = b.targetY;
+
+            ctx.save();
+            // Intense laser sight line
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+            ctx.lineWidth = 1.8;
+            ctx.shadowColor = '#0284c7';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+
+            // Inner laser bright beam
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+
+            // Holographic targeting reticle centered on target
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(tx, ty, 18, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(tx, ty, 6, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(tx - 24, ty);
+            ctx.lineTo(tx - 10, ty);
+            ctx.moveTo(tx + 10, ty);
+            ctx.lineTo(tx + 24, ty);
+            ctx.moveTo(tx, ty - 24);
+            ctx.lineTo(tx, ty - 10);
+            ctx.moveTo(tx, ty + 10);
+            ctx.lineTo(tx, ty + 24);
+            ctx.stroke();
+
+            ctx.restore();
+          }
         });
       }
 
@@ -3875,27 +4218,20 @@ function BallBattleGame() {
           ctx.restore();
         }
 
-        const currentRot = simState === 'planning'
-          ? ball.angle
-          : (ball.type === BALL_TYPES.FIRE
-            ? (ball.fireAngle || 0)
-            : (ball.type === BALL_TYPES.SPIKE
-              ? (ball.spikeAngle || 0)
-              : (ball.type === BALL_TYPES.HAMMER
-                ? (ball.hammerAngle || 0)
-                : (ball.type === BALL_TYPES.KNIFE
-                  ? (ball.knifeAngle || 0)
-                  : (ball.type === BALL_TYPES.SHARD
-                    ? (ball.shardAngle || 0)
-                    : (ball.type === BALL_TYPES.GUN
-                      ? (ball.gunAngle || 0)
-                      : (ball.type === BALL_TYPES.THORN
-                        ? (ball.thornAngle || 0)
-                        : (ball.type === BALL_TYPES.MULTI
-                          ? (ball.multiAngle || 0)
-                          : (ball.type === BALL_TYPES.ACCELERATOR
-                            ? Math.atan2(ball.vy || 0, ball.vx || 1)
-                            : (ball.swordAngle || 0))))))))));
+        let currentRot = ball.angle || 0;
+        if (simState !== 'planning') {
+          if (ball.type === BALL_TYPES.FIRE) currentRot = ball.fireAngle || 0;
+          else if (ball.type === BALL_TYPES.SPIKE) currentRot = ball.spikeAngle || 0;
+          else if (ball.type === BALL_TYPES.HAMMER) currentRot = ball.hammerAngle || 0;
+          else if (ball.type === BALL_TYPES.KNIFE) currentRot = ball.knifeAngle || 0;
+          else if (ball.type === BALL_TYPES.SHARD) currentRot = ball.shardAngle || 0;
+          else if (ball.type === BALL_TYPES.GUN) currentRot = ball.gunAngle || 0;
+          else if (ball.type === BALL_TYPES.SNIPER) currentRot = ball.sniperAngle || 0;
+          else if (ball.type === BALL_TYPES.THORN) currentRot = ball.thornAngle || 0;
+          else if (ball.type === BALL_TYPES.MULTI) currentRot = ball.multiAngle || 0;
+          else if (ball.type === BALL_TYPES.ACCELERATOR) currentRot = Math.atan2(ball.vy || 0, ball.vx || 1);
+          else currentRot = ball.swordAngle || 0;
+        }
         const config = ball.config || BALL_CONFIGS[ball.type];
 
         const hasTeamMode = (simState === 'planning' ? placedBalls : physicsRef.current.balls)
@@ -4075,6 +4411,27 @@ function BallBattleGame() {
             ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
             ctx.lineWidth = 0.5;
             ctx.strokeRect(barX, healBarY, barWidth, healBarH);
+          }
+
+          // Sniper Ball 4-second lock-on sniper cooldown / aim indicator on arena floor/canvas
+          if (ball.type === BALL_TYPES.SNIPER) {
+            const sniperBarH = 2.5;
+            const sniperBarY = barY + barHeight + 2;
+            const totalCd = 4000;
+            const isAiming = ball.sniperState === 'aiming';
+            const progress = isAiming
+              ? 1.0
+              : Math.min(1, Math.max(0, (totalCd - (ball.sniperCooldown !== undefined ? ball.sniperCooldown : totalCd)) / totalCd));
+
+            ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
+            ctx.fillRect(barX, sniperBarY, barWidth, sniperBarH);
+
+            ctx.fillStyle = isAiming ? '#38bdf8' : (progress >= 1 ? '#7dd3fc' : '#0284c7');
+            ctx.fillRect(barX, sniperBarY, barWidth * progress, sniperBarH);
+
+            ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(barX, sniperBarY, barWidth, sniperBarH);
           }
 
           ctx.restore();
@@ -5033,6 +5390,35 @@ function BallBattleGame() {
                               </div>
                             )}
 
+                            {/* Sniper Ball 4-Second Sniper Lock-On Bar */}
+                            {b.type === BALL_TYPES.SNIPER && (
+                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 45 DMG bullet">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
+                                    {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
+                                  </span>
+                                  <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
+                                    {b.sniperState === 'aiming'
+                                      ? 'AIMING...'
+                                      : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(56, 189, 248, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.sniperState === 'aiming'
+                                        ? '100%'
+                                        : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',
+                                      boxShadow: '0 0 6px rgba(56, 189, 248, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
                             {/* Row 4: SVG Icons of Effects (No emojis) */}
                             <div className="hud-row-effects">
                               {b.bleedTicksLeft > 0 && (
@@ -5206,6 +5592,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <GunIcon size={13} color="#f59e0b" /> GUN
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.SNIPER && (
+                                <span
+                                  className="hud-effect-badge sniper-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SNIPER')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SniperIcon size={13} color="#38bdf8" /> SNIPER
                                 </span>
                               )}
                               {b.type === BALL_TYPES.THORN && (
@@ -5487,6 +5882,35 @@ function BallBattleGame() {
                               </div>
                             )}
 
+                            {/* Sniper Ball 4-Second Sniper Lock-On Bar */}
+                            {b.type === BALL_TYPES.SNIPER && (
+                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 45 DMG bullet">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
+                                    {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
+                                  </span>
+                                  <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
+                                    {b.sniperState === 'aiming'
+                                      ? 'AIMING...'
+                                      : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(56, 189, 248, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.sniperState === 'aiming'
+                                        ? '100%'
+                                        : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',
+                                      boxShadow: '0 0 6px rgba(56, 189, 248, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
                             {/* Row 4: SVG Icons of Effects (No emojis) */}
                             <div className="hud-row-effects">
                               {b.bleedTicksLeft > 0 && (
@@ -5660,6 +6084,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <GunIcon size={13} color="#f59e0b" /> GUN
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.SNIPER && (
+                                <span
+                                  className="hud-effect-badge sniper-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SNIPER')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SniperIcon size={13} color="#38bdf8" /> SNIPER
                                 </span>
                               )}
                               {b.type === BALL_TYPES.THORN && (
