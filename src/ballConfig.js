@@ -127,19 +127,20 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.KNIFE,
     name: 'Knife Ball',
     rarity: RARITIES.UNCOMMON,
-    description: 'Equipped with a compact combat knife that spins rapidly at double speed, slashing nearby enemies in close quarters.',
+    description: 'A nimble, compact combat unit equipped with a rapid spinning knife that slashes enemies and inflicts Bleed (-2, -1).',
     baseHp: 100,
     damage: 7,         // Body hitbox deals lower bump damage
-    knifeDamage: 15,   // Rapid spinning knife blade deals 15 damage
+    knifeDamage: 15,   // Rapid spinning knife blade deals 15 damage + Bleed
     speed: 2.3,
-    radius: 37,
-    mass: 1.05,
+    radius: 32,        // made smaller (from 37 down to 32)
+    mass: 0.95,        // slightly lighter for compact body
     bodyColor: '#4b5563',      // gray body
     highlightColor: '#9ca3af', // lighter gray highlight
     shadowColor: '#1f2937',    // deep dark gray shadow
     knifeColor: '#cbd5e1',     // steel blade
-    special: 'Rapid Spinning Knife',
-    knifeLength: 28,           // compact combat knife blade
+    special: 'Rapid Knife & Bleed',
+    inflicts: 'Bleed (-2 -1)',
+    knifeLength: 26,           // compact combat knife blade scaled to smaller body
   },
   [BALL_TYPES.SWORD]: {
     id: BALL_TYPES.SWORD,

@@ -126,7 +126,7 @@ const EFFECT_TOOLTIPS = {
     title: 'KNIFE BLADE',
     category: 'WEAPON TAG',
     icon: <KnifeIcon size={14} color="#94a3b8" />,
-    description: 'Equipped with a compact combat knife that turns at rapid double speed, delivering swift 15 damage slashes in close proximity.',
+    description: 'Equipped with a compact combat knife that turns at rapid double speed, delivering swift 15 damage slashes that lacerate enemies with Bleed (-2, -1).',
   },
   SPLIT: {
     title: 'SPLIT',
@@ -3290,9 +3290,9 @@ function BallBattleGame() {
     };
 
     const checkKnifeHit = (attacker, victim) => {
-      const knifeLen = attacker.config?.knifeLength || BALL_CONFIGS[BALL_TYPES.KNIFE].knifeLength;
-      const knifeX = attacker.x + Math.cos(attacker.knifeAngle) * knifeLen;
-      const knifeY = attacker.y + Math.sin(attacker.knifeAngle) * knifeLen;
+      const knifeReach = (attacker.radius || 32) + (attacker.config?.knifeLength || 26) * 0.75;
+      const knifeX = attacker.x + Math.cos(attacker.knifeAngle) * knifeReach;
+      const knifeY = attacker.y + Math.sin(attacker.knifeAngle) * knifeReach;
 
       const d = Math.hypot(victim.x - knifeX, victim.y - knifeY);
       if (d < victim.radius + 8 && victim.invulnerableTimer <= 0) {
@@ -3304,8 +3304,17 @@ function BallBattleGame() {
         const isArmored = victim.hasArmor || victim.config?.hasArmor || victim.type === BALL_TYPES.STONE || victim.type === BALL_TYPES.SPIKE;
         if (isArmored) {
           sound.play('swordHitToArmor', 0.85);
+          spawnParticles(knifeX, knifeY, '#94a3b8', 6, 1.2);
         } else {
           sound.play('swordHit', 0.85);
+          // Knife blade inflicts Bleed (-2, -1)
+          victim.bleedTicksLeft = 2;
+          victim.bleedTimer = 550;
+          victim.bleedSource = attacker;
+          victim.bleedQueue = [2, 1];
+          sound.play('bleed', 0.8);
+          spawnParticles(knifeX, knifeY, '#ef4444', 8, 1.5);
+          spawnParticles(knifeX, knifeY, '#fb7185', 4, 1.1);
         }
 
         // Fast knife: brief 60ms freeze on hit, then reverse spin
@@ -3315,7 +3324,6 @@ function BallBattleGame() {
         const pushAng = attacker.knifeAngle;
         victim.vx += Math.cos(pushAng) * 3.2;
         victim.vy += Math.sin(pushAng) * 3.2;
-        spawnParticles(knifeX, knifeY, '#94a3b8', 8, 1.5);
       }
     };
 
