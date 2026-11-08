@@ -44,62 +44,17 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 
 ---
 
-## 🏆 Complete Roster of Ball Classes
+## 🔮 Ball Classes & Rarity Tiers
 
-The simulator features **15 unique ball combat archetypes** balanced across 5 rarity tiers:
+Combatants in Ball Battle Simulator are categorized into **5 distinct rarity tiers**, spanning agile baseline brawlers, armored tanks, kinetic speedsters, artillery cannons, and botanical hazard planters — **with many more ball classes and abilities actively on the way!**
 
-### ⚪ Common Tier
-*Baseline combatants suitable for swarming and frontline engagements.*
+- **⚪ Common**: Baseline combatants (e.g., *Normal*, *Fast*, *Big*) ideal for frontline engagements, rapid scouting, and momentum-based swarms.
+- **🟢 Uncommon**: Armored units and blade specialists (e.g., *Stone*, *Steel*, *Sword*, *Spike*) featuring kinetic shields, puncture spikes, and bleed immunity.
+- **🔵 Rare**: Tactical fighters and scaling behemoths (e.g., *Glass*, *Hammer*, *Grow*, *Knife*) equipped with brittle shard bursts, heavy knockback warhammers, rapid combat knives, and dynamic size growth.
+- **🟣 Unique**: Advanced weapon systems and scaling speedsters (e.g., *Accelerator*, *Shard*, *Gun*) featuring velocity-scaled kinetic damage, homing crystal volleys, and rotating high-caliber firearms.
+- **🌸 Epic**: Masters of environmental warfare (e.g., *Thorn*) capable of permanently claiming the arena perimeter with creeping floral vines and lethal bleed ailments.
 
-| Ball | Stats (HP / DMG / SPD) | Combat Specialty |
-| :--- | :---: | :--- |
-| **Normal Ball** | 100 HP · 10 DMG · 2.2 SPD | Standard baseline warrior with balanced weight and reliable body bump damage. |
-| **Fast Ball** | 100 HP · 7 DMG · 3.6 SPD | Lightweight speedster that darts around the arena to outmaneuver slower opponents. |
-| **Big Ball** | 100 HP · 12 DMG · 1.9 SPD | High-mass heavyweight capable of delivering heavy momentum displacement on impact. |
-
----
-
-### 🟢 Uncommon Tier
-*Specialized units equipped with basic armaments, shields, or fortified armor.*
-
-| Ball | Stats (HP / DMG / SPD) | Combat Specialty |
-| :--- | :---: | :--- |
-| **Stone Ball** | 130 HP · 8 DMG · 1.3 SPD | **Heavy Armor**: Boasts +30% bonus HP (130 HP), heavy mass (2.6), and rocky shell completely immune to bleed. |
-| **Steel Ball** | 100 HP · 11 DMG · 2.1 SPD | **Kinetic Barrier**: Automatically generates a +20 Shield energy barrier every 4 hits taken. |
-| **Sword Ball** | 100 HP · 6 DMG · 2.1 SPD | **Spinning Blade**: Armed with a rotating steel broadsword that deals heavy slashing damage (22 DMG) on contact. |
-| **Spike Ball** | 100 HP · 15 DMG · 2.0 SPD | **Puncture Spikes**: Armored frame covered in steel spikes dealing heavy puncture damage (15 DMG) with bleed immunity. |
-
----
-
-### 🔵 Rare Tier
-*Tactical fighters possessing area control, size growth, or advanced melee weapons.*
-
-| Ball | Stats (HP / DMG / SPD) | Combat Specialty |
-| :--- | :---: | :--- |
-| **Glass Ball** | 100 HP · 9 DMG · 2.3 SPD | **Brittle Shards**: Fragile crystalline orb that shatters into sharp glass shards upon taking hits, inflicting **Bleed**. |
-| **Hammer Ball** | 100 HP · 7 DMG · 1.9 SPD | **Heavy Knockback**: Swings an extended warhammer (24 DMG) that repels enemies with violent kinetic knockback. |
-| **Grow Ball** | 100 HP · 9 DMG · 2.2 SPD | **Size Growth & Heavy**: Expands in radius and mass (up to 6.0 mass) upon enemy collision; acquires the **Heavy Effect** at 2.8+ size. |
-| **Knife Ball** | 100 HP · 7 DMG · 2.3 SPD | **Rapid Spinning Knife**: Wields a compact combat knife spinning at double rotation speed, dealing rapid 15 DMG slashes in close quarters. |
-
----
-
-### 🟣 Unique Tier
-*High-tech weapon systems and scaling kinetic specialists.*
-
-| Ball | Stats (HP / DMG / SPD) | Combat Specialty |
-| :--- | :---: | :--- |
-| **Accelerator Ball** | 100 HP · 8 DMG · 2.6 SPD | **Kinetic Acceleration**: Continuously speeds up over time (up to 12.0 max speed); collision damage scales higher as speed increases. |
-| **Shard Ball** | 100 HP · 8 DMG · 2.2 SPD | **Homing Shards**: Striking an enemy inflicts *Shard Target* and unleashes 6 consecutive homing crystal shards dealing 1 DMG each. |
-| **Gun Ball** | 100 HP · 7 DMG · 2.0 SPD | **Gun Cannon**: Mounts a rotating firearm that fires a high-caliber projectile (32 DMG) every 3 seconds with authentic wall ricochets. |
-
----
-
-### 🌸 Epic Tier
-*Master of arena hazards and environmental bleed traps.*
-
-| Ball | Stats (HP / DMG / SPD) | Combat Specialty |
-| :--- | :---: | :--- |
-| **Thorn Ball** | 100 HP · 8 DMG · 2.1 SPD | **Thorns & Bleed**: Direct body hits inflict -2 -1 Bleed. Bouncing off walls permanently sprouts creeping floral Thorns (**S**, **M**, **L**) perpendicular into the arena that deal 2 DMG and -1 -1 Bleed. |
+> 💡 *You can inspect every unit's live combat stats, passives, and weapon scaling at any time during gameplay via the in-game **Effects & Weapons Codex**!*
 
 ---
 
