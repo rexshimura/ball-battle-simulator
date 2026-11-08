@@ -150,7 +150,7 @@ const EFFECT_TOOLTIPS = {
     title: 'SELF-HEAL',
     category: 'ABILITY TAG',
     icon: <HealIcon size={14} color="#10b981" />,
-    description: 'Periodically pulses restorative green energy every 5 seconds, regenerating +30 HP to itself in combat.',
+    description: 'Periodically pulses restorative green energy every 6 seconds, regenerating +5 HP to itself in combat.',
   },
 };
 
@@ -1744,7 +1744,7 @@ function BallBattleGame() {
         growCooldown: 0,
         growDelayTimer: 0,
         hasTriggeredGrowFx: false,
-        healTimer: 5000,
+        healTimer: 6000,
         healFlashTimer: 0,
         missingNotches: [],
         fireHistory: b.type === BALL_TYPES.FIRE ? Array.from({ length: 16 }, (_, idx) => ({
@@ -2499,14 +2499,15 @@ function BallBattleGame() {
           ball.multiAngle = (ball.multiAngle || 0) + safeDt * 3.4;
         }
 
-        // Heal Ball: Self-heals +30 HP every 5 seconds
+        // Heal Ball: Self-heals +5 HP every 6 seconds
         if (ball.type === BALL_TYPES.HEAL && !ball.isDead && !ball.isDying) {
-          if (ball.healTimer === undefined) ball.healTimer = 5000;
+          const interval = ball.config?.healInterval || 6000;
+          if (ball.healTimer === undefined) ball.healTimer = interval;
           ball.healTimer -= safeDt * 1000;
           if (ball.healTimer <= 0) {
-            ball.healTimer = 5000;
+            ball.healTimer = interval;
             if (ball.hp < ball.maxHp) {
-              const healAmount = ball.config?.healAmount || 30;
+              const healAmount = ball.config?.healAmount || 5;
               const prevHp = ball.hp;
               ball.hp = Math.min(ball.maxHp, ball.hp + healAmount);
               const actualHealed = ball.hp - prevHp;
@@ -2514,9 +2515,9 @@ function BallBattleGame() {
                 ball.healFlashTimer = 350;
                 spawnHealText(ball.x, ball.y, actualHealed);
                 sound.play('heal', 0.95);
-                spawnParticles(ball.x, ball.y, '#10b981', 12, 1.8);
-                spawnParticles(ball.x, ball.y, '#6ee7b7', 8, 1.5);
-                spawnParticles(ball.x, ball.y, '#ffffff', 5, 1.2);
+                spawnParticles(ball.x, ball.y, '#10b981', 8, 1.6);
+                spawnParticles(ball.x, ball.y, '#6ee7b7', 5, 1.3);
+                spawnParticles(ball.x, ball.y, '#ffffff', 3, 1.0);
               }
             }
           }
@@ -3935,6 +3936,25 @@ function BallBattleGame() {
             ctx.strokeRect(barX, reloadBarY, barWidth, reloadBarH);
           }
 
+          // Heal Ball 6-second self-heal cooldown bar on arena floor/canvas
+          if (ball.type === BALL_TYPES.HEAL) {
+            const healBarH = 2.5;
+            const healBarY = barY + barHeight + 2;
+            const interval = ball.config?.healInterval || 6000;
+            const timer = ball.healTimer !== undefined ? ball.healTimer : interval;
+            const progress = Math.min(1, Math.max(0, (interval - timer) / interval));
+
+            ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
+            ctx.fillRect(barX, healBarY, barWidth, healBarH);
+
+            ctx.fillStyle = progress >= 1 ? '#34d399' : '#10b981';
+            ctx.fillRect(barX, healBarY, barWidth * progress, healBarH);
+
+            ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(barX, healBarY, barWidth, healBarH);
+          }
+
           ctx.restore();
         }
       });
@@ -4868,6 +4888,29 @@ function BallBattleGame() {
                               </div>
                             )}
 
+                            {/* Heal Ball 6-Second Regeneration Bar */}
+                            {b.type === BALL_TYPES.HEAL && (
+                              <div className="hud-shield-charge-wrapper" title="Self-Heal: Regenerates +5 HP every 6 seconds">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#10b981' }}>HEAL RECHARGE</span>
+                                  <span className="hud-charge-numeric" style={{ color: '#10b981' }}>
+                                    {((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 1000).toFixed(1)}s / 6.0s
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(16, 185, 129, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, ((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 6000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: '#10b981',
+                                      boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
                             {/* Row 4: SVG Icons of Effects (No emojis) */}
                             <div className="hud-row-effects">
                               {b.bleedTicksLeft > 0 && (
@@ -5292,6 +5335,29 @@ function BallBattleGame() {
                                       height: '100%',
                                       backgroundColor: '#f59e0b',
                                       boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Heal Ball 6-Second Regeneration Bar */}
+                            {b.type === BALL_TYPES.HEAL && (
+                              <div className="hud-shield-charge-wrapper" title="Self-Heal: Regenerates +5 HP every 6 seconds">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#10b981' }}>HEAL RECHARGE</span>
+                                  <span className="hud-charge-numeric" style={{ color: '#10b981' }}>
+                                    {((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 1000).toFixed(1)}s / 6.0s
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(16, 185, 129, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, ((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 6000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: '#10b981',
+                                      boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
                                       transition: 'width 0.05s linear',
                                     }}
                                   />

@@ -128,7 +128,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.HEAL,
     name: 'Heal Ball',
     rarity: RARITIES.UNCOMMON,
-    description: 'Acts like a normal ball in combat, but regenerates +30 HP to itself every 5 seconds.',
+    description: 'Acts like a normal ball in combat, but regenerates +5 HP to itself every 6 seconds.',
     baseHp: 100,
     damage: 10,
     speed: 2.2,
@@ -137,9 +137,9 @@ export const BALL_CONFIGS = {
     bodyColor: '#10b981',      // Emerald / Jade healing green
     highlightColor: '#a7f3d0', // Mint glow highlight
     shadowColor: '#064e3b',    // Deep forest jade shadow
-    special: 'Self-Heal (5s Cooldown)',
-    healAmount: 30,
-    healInterval: 5000,
+    special: 'Self-Heal (6s Cooldown)',
+    healAmount: 5,
+    healInterval: 6000,
   },
   [BALL_TYPES.KNIFE]: {
     id: BALL_TYPES.KNIFE,
