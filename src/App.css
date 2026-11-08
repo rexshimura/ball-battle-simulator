@@ -870,6 +870,15 @@ html, body, #root {
   100% { border-color: #38bdf8; box-shadow: 0 0 8px rgba(56, 189, 248, 0.7); }
 }
 
+.hud-effect-badge.dice-active {
+  animation: dicePulse 1.2s infinite alternate;
+}
+
+@keyframes dicePulse {
+  0% { border-color: #d97706; box-shadow: 0 0 3px rgba(217, 119, 6, 0.4); }
+  100% { border-color: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.75); }
+}
+
 .sim-team-tallies {
   display: flex;
   align-items: center;

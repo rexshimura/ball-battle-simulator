@@ -38,6 +38,10 @@ const SFX_FILES = {
   gameStart: '/sfx/sfx-game-start.mp3',
   heal: '/sfx/sfx-ball-heal.mp3',
   sniperAimAndShoot: '/sfx/sfx-ball-sniper-aim-and-shoot.mp3',
+  diceHit: '/sfx/sfx-ball-dice-hit.mp3',
+  diceRollHigh: '/sfx/sfx-ball-roll-high.mp3',
+  diceRollMid: '/sfx/sfx-ball-roll-mid.mp3',
+  diceRollLow: '/sfx/sfx-ball-roll-low.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound

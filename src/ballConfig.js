@@ -31,6 +31,7 @@ export const BALL_TYPES = {
   // Legendary
   THORN: 'THORN',
   FIRE: 'FIRE',
+  DICE: 'DICE',
 };
 
 export const RARITIES = {
@@ -347,13 +348,13 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.SNIPER,
     name: 'Sniper Ball',
     rarity: RARITIES.EPIC,
-    description: 'Mounted with a long-range tactical sniper rifle. Has very low body collision damage (3 DMG), but periodically freezes in midair to lock its precision laser sight onto an enemy and discharge an armor-piercing 20 DMG sniper round.',
+    description: 'Mounted with a long-range tactical sniper rifle. Has very low body collision damage (3 DMG), but periodically freezes in midair to lock its precision laser sight onto an enemy and discharge an armor-piercing 15 DMG sniper round.',
     baseHp: 100,
     damage: 3,
     speed: 2.1,
     radius: 38,
     mass: 1.05,
-    bulletDamage: 20,
+    bulletDamage: 15,
     sniperCooldown: 4000,
     aimDuration: 1200,
     bodyColor: '#1e293b',      // Matte tactical slate
@@ -399,6 +400,22 @@ export const BALL_CONFIGS = {
     flameColor: '#f97316',
     special: 'Flaming & Burn (Burns Thorns)',
     inflicts: 'Burn (-4 -3 -2 -1 -1 -1)',
+  },
+  [BALL_TYPES.DICE]: {
+    id: BALL_TYPES.DICE,
+    name: 'Dice Ball',
+    rarity: RARITIES.LEGENDARY,
+    description: 'A high-stakes casino die with dynamic body damage (starts at 15). Striking an enemy rolls a random damage value based on audio pitch: High (50-80), Mid (20-49), or Low (5-19), updating the live value displayed on its body.',
+    baseHp: 100,
+    damage: 15,
+    speed: 2.2,
+    radius: 38,
+    mass: 1.1,
+    bodyColor: '#f8fafc',      // Porcelain ivory dice white
+    highlightColor: '#ffffff', // High-gloss reflection
+    shadowColor: '#94a3b8',    // Slate beveled shadow
+    pipColor: '#0f172a',       // Obsidian dice pips
+    special: 'Lucky Roll (5 - 80 DMG)',
   },
 };
 
