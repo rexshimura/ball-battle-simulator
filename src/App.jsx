@@ -852,7 +852,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Fire Ball: Literal roaring fire streaming in flameAngle (Upwards by default, or behind motion)
+  // Fire Ball: Roaring volumetric fire column & flanking crescent arcs (matching reference image)
   if (config.id === BALL_TYPES.FIRE) {
     ctx.save();
     ctx.translate(x, y);
@@ -861,129 +861,151 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     const lengthScale = 1.0 + Math.min(1.4, flameSpeed * 0.28);
     const flickerTime = rotationAngle * 4;
 
-    // 1. Broad Ambient Heat & Glow Bloom expanding in flame direction
-    const bloomGrad = ctx.createRadialGradient(radius * 0.2, 0, radius * 0.2, radius * 0.5 * lengthScale, 0, radius * 2.1 * lengthScale);
-    bloomGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
-    bloomGrad.addColorStop(0.3, 'rgba(249, 115, 22, 0.35)');
-    bloomGrad.addColorStop(0.65, 'rgba(220, 38, 38, 0.18)');
+    // 1. Broad Radiant Amber & Heat Bloom
+    const bloomGrad = ctx.createRadialGradient(
+      radius * 0.4, 0, radius * 0.2,
+      radius * 0.8 * lengthScale, 0, radius * 2.8 * lengthScale
+    );
+    bloomGrad.addColorStop(0, 'rgba(254, 240, 138, 0.48)');
+    bloomGrad.addColorStop(0.25, 'rgba(249, 115, 22, 0.38)');
+    bloomGrad.addColorStop(0.6, 'rgba(220, 38, 38, 0.18)');
     bloomGrad.addColorStop(1, 'rgba(124, 45, 18, 0)');
     ctx.fillStyle = bloomGrad;
     ctx.beginPath();
-    ctx.ellipse(radius * 0.5 * lengthScale, 0, radius * 1.8 * lengthScale, radius * 1.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(radius * 0.8 * lengthScale, 0, radius * 2.5 * lengthScale, radius * 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Outer Layer: Deep Crimson & Molten Blaze Tongue Silhouettes
-    const outerTongues = 9;
-    for (let t = 0; t < outerTongues; t++) {
-      const norm = (t / (outerTongues - 1)) * 2 - 1; // -1 to +1 across the ball width
-      const baseY = norm * (radius * 0.88);
-      const baseX = Math.sqrt(Math.max(0, radius * radius - baseY * baseY)) * 0.25;
+    // 2. Flanking Curved Crescent Fire Arcs hugging both sides of the core (as seen in reference)
+    [-1, 1].forEach(side => {
+      ctx.save();
+      const waveSide = Math.sin(flickerTime * 3.5 + side * 1.5);
+      const arcDist = radius * (1.18 + 0.08 * waveSide);
 
-      const wave1 = Math.sin(flickerTime * 2.5 + t * 1.7);
-      const wave2 = Math.cos(flickerTime * 3.8 + t * 2.1);
-      const tongueLen = radius * (1.1 + 0.75 * (1 - Math.abs(norm) * 0.35) * lengthScale + 0.28 * wave1);
-      const tipX = baseX + tongueLen;
-      const tipY = baseY * 0.45 + wave2 * (radius * 0.22);
-
-      const cp1X = baseX + tongueLen * 0.4;
-      const cp1Y = baseY * 1.25 + wave1 * 6;
-      const cp2X = baseX + tongueLen * 0.75;
-      const cp2Y = tipY + wave2 * 5;
-
+      // Outer crescent shockwave arc
       ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, tipX, tipY);
-      ctx.bezierCurveTo(cp2X, cp2Y - norm * 6, cp1X, baseY * 0.6, baseX, baseY * 0.3);
-      ctx.closePath();
+      ctx.arc(0, 0, arcDist, (side === 1 ? -0.85 : 0.85) * Math.PI, (side === 1 ? -0.15 : 0.15) * Math.PI, side === -1);
+      ctx.strokeStyle = 'rgba(249, 115, 22, 0.65)';
+      ctx.lineWidth = Math.max(3, radius * 0.18);
+      ctx.lineCap = 'round';
+      ctx.stroke();
 
-      const outGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
+      // Inner golden highlight arc
+      ctx.beginPath();
+      ctx.arc(0, 0, arcDist * 0.92, (side === 1 ? -0.7 : 0.7) * Math.PI, (side === 1 ? -0.25 : 0.25) * Math.PI, side === -1);
+      ctx.strokeStyle = 'rgba(254, 240, 138, 0.75)';
+      ctx.lineWidth = Math.max(1.8, radius * 0.09);
+      ctx.stroke();
+
+      ctx.restore();
+    });
+
+    // 3. Central Continuous Molten Fire Mantle (Solid blazing core column)
+    const baseHalfW = radius * 0.82;
+    const midHalfW = radius * 0.45;
+    const colLen = radius * 3.2 * lengthScale;
+    const waveMid = Math.sin(flickerTime * 3.2) * (radius * 0.15);
+    const waveTip = Math.sin(flickerTime * 4.5) * (radius * 0.22);
+
+    ctx.beginPath();
+    ctx.moveTo(0, -baseHalfW);
+    ctx.bezierCurveTo(
+      radius * 0.8, -baseHalfW * 1.1,
+      radius * 1.8, -midHalfW + waveMid,
+      colLen * 0.75, waveTip * 0.6
+    );
+    ctx.lineTo(colLen, waveTip);
+    ctx.bezierCurveTo(
+      colLen * 0.75, waveTip * 0.6,
+      radius * 1.8, midHalfW + waveMid,
+      radius * 0.8, baseHalfW * 1.1
+    );
+    ctx.lineTo(0, baseHalfW);
+    ctx.closePath();
+
+    const mantleGrad = ctx.createLinearGradient(0, 0, colLen, 0);
+    if (isHit) {
+      mantleGrad.addColorStop(0, '#ffffff');
+      mantleGrad.addColorStop(1, '#ffffff');
+    } else {
+      mantleGrad.addColorStop(0, '#ffffff');
+      mantleGrad.addColorStop(0.18, '#fef08a');
+      mantleGrad.addColorStop(0.45, '#f97316');
+      mantleGrad.addColorStop(0.78, '#dc2626');
+      mantleGrad.addColorStop(1, 'rgba(185, 28, 28, 0)');
+    }
+    ctx.fillStyle = mantleGrad;
+    ctx.fill();
+
+    // 4. Volumetric Billowing Flame Puffs (Stacked along the central spine)
+    const puffCount = 18;
+    for (let p = 0; p < puffCount; p++) {
+      const t = p / (puffCount - 1); // 0 at base, 1 at top tip
+      const baseDist = radius * (0.35 + t * (2.85 * lengthScale));
+
+      // Organic dynamic wave swaying
+      const sway1 = Math.sin(flickerTime * 3.8 + p * 0.75) * (radius * 0.18 * (1 - t * 0.35));
+      const sway2 = Math.cos(flickerTime * 5.2 + p * 1.3) * (radius * 0.1);
+      const puffX = baseDist + Math.sin(flickerTime * 4.0 + p) * (radius * 0.05);
+      const puffY = sway1 + sway2;
+
+      // Puff size tapers as it rises
+      const baseR = (t < 0.25)
+        ? radius * (0.68 - t * 0.4)
+        : (t < 0.65)
+          ? radius * (0.52 - (t - 0.25) * 0.6)
+          : radius * (0.28 - (t - 0.65) * 0.55);
+      const puffR = Math.max(2.5, baseR * (0.85 + 0.3 * Math.sin(flickerTime * 4.5 + p * 1.8)));
+
+      const pGrad = ctx.createRadialGradient(
+        puffX - puffR * 0.2, puffY, puffR * 0.1,
+        puffX, puffY, puffR
+      );
+
       if (isHit) {
-        outGrad.addColorStop(0, '#ffffff');
-        outGrad.addColorStop(1, '#ffffff');
+        pGrad.addColorStop(0, '#ffffff');
+        pGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      } else if (t < 0.28) {
+        // Lower: White-hot to brilliant yellow
+        pGrad.addColorStop(0, '#ffffff');
+        pGrad.addColorStop(0.4, '#fef08a');
+        pGrad.addColorStop(0.8, 'rgba(249, 115, 22, 0.85)');
+        pGrad.addColorStop(1, 'rgba(234, 88, 12, 0)');
+      } else if (t < 0.68) {
+        // Mid: Vibrant gold to fiery orange
+        pGrad.addColorStop(0, '#fef08a');
+        pGrad.addColorStop(0.35, '#facc15');
+        pGrad.addColorStop(0.75, 'rgba(234, 88, 12, 0.8)');
+        pGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
       } else {
-        outGrad.addColorStop(0, '#ea580c');
-        outGrad.addColorStop(0.5, '#f97316');
-        outGrad.addColorStop(0.85, '#dc2626');
-        outGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+        // Upper: Fiery red to smoky burnt-orange
+        pGrad.addColorStop(0, '#f97316');
+        pGrad.addColorStop(0.45, 'rgba(220, 38, 38, 0.75)');
+        pGrad.addColorStop(0.8, 'rgba(153, 27, 27, 0.4)');
+        pGrad.addColorStop(1, 'rgba(127, 29, 29, 0)');
       }
-      ctx.fillStyle = outGrad;
+
+      ctx.fillStyle = pGrad;
+      ctx.beginPath();
+      ctx.arc(puffX, puffY, puffR, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 3. Mid Layer: Blazing Vivid Orange & Amber Fire Flames
-    const midTongues = 7;
-    for (let t = 0; t < midTongues; t++) {
-      const norm = (t / (midTongues - 1)) * 2 - 1;
-      const baseY = norm * (radius * 0.65);
-      const baseX = Math.sqrt(Math.max(0, radius * radius - baseY * baseY)) * 0.4;
-
-      const wave1 = Math.cos(flickerTime * 3.2 + t * 2.3);
-      const wave2 = Math.sin(flickerTime * 4.1 + t * 1.9);
-      const tongueLen = radius * (0.8 + 0.65 * (1 - Math.abs(norm) * 0.3) * lengthScale + 0.22 * wave1);
-      const tipX = baseX + tongueLen;
-      const tipY = baseY * 0.35 + wave2 * (radius * 0.16);
+    // 5. Rising Ember & Spark Clusters Ascending from the Tip
+    const sparkCount = 8;
+    for (let s = 0; s < sparkCount; s++) {
+      const sPhase = (flickerTime * 0.75 + s * 0.42) % 1.0;
+      const sDist = radius * (3.0 + sPhase * 1.5 * lengthScale);
+      const sSway = Math.sin(s * 2.8 + flickerTime * 3.5) * (radius * 0.12);
+      const sSize = Math.max(1.2, radius * (0.11 * (1 - sPhase * 0.75)));
+      const alpha = 1.0 - sPhase;
 
       ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, baseY * 1.1 + wave1 * 5, tipX, tipY);
-      ctx.quadraticCurveTo(baseX + tongueLen * 0.6, baseY * 0.2, baseX, baseY * 0.2);
-      ctx.closePath();
-
-      const midGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
-      if (isHit) {
-        midGrad.addColorStop(0, '#ffffff');
-        midGrad.addColorStop(1, '#ffffff');
-      } else {
-        midGrad.addColorStop(0, '#f97316');
-        midGrad.addColorStop(0.55, '#facc15');
-        midGrad.addColorStop(1, 'rgba(250, 204, 21, 0)');
-      }
-      ctx.fillStyle = midGrad;
-      ctx.fill();
-    }
-
-    // 4. Inner Layer: White-Hot Solar Core Flame
-    const coreTongues = 5;
-    for (let t = 0; t < coreTongues; t++) {
-      const norm = (t / (coreTongues - 1)) * 2 - 1;
-      const baseY = norm * (radius * 0.4);
-      const baseX = radius * 0.2;
-
-      const wave = Math.sin(flickerTime * 5.0 + t * 3.1);
-      const tongueLen = radius * (0.55 + 0.4 * (1 - Math.abs(norm) * 0.4) * lengthScale + 0.15 * wave);
-      const tipX = baseX + tongueLen;
-      const tipY = baseY * 0.3 + wave * 4;
-
-      ctx.beginPath();
-      ctx.moveTo(baseX, baseY);
-      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, baseY * 0.8, tipX, tipY);
-      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, 0, baseX, -baseY * 0.5);
-      ctx.closePath();
-
-      const coreGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
-      if (isHit) {
-        coreGrad.addColorStop(0, '#ffffff');
-        coreGrad.addColorStop(1, '#ffffff');
-      } else {
-        coreGrad.addColorStop(0, '#ffffff');
-        coreGrad.addColorStop(0.5, '#fef08a');
-        coreGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-      }
-      ctx.fillStyle = coreGrad;
-      ctx.fill();
-    }
-
-    // 5. Burning Embers & Sparks flying away in flame direction
-    const emberCount = 6;
-    for (let e = 0; e < emberCount; e++) {
-      const ePhase = (flickerTime * 0.7 + e * 1.6) % 1.0;
-      const eDist = radius * (1.1 + ePhase * 1.5 * lengthScale);
-      const eSpread = (Math.sin(e * 3.7 + flickerTime) * 0.5) * radius;
-      const eSize = Math.max(1.2, radius * 0.08 * (1 - ePhase * 0.6));
-
-      ctx.beginPath();
-      ctx.arc(eDist, eSpread, eSize, 0, Math.PI * 2);
-      ctx.fillStyle = e % 2 === 0 ? 'rgba(254, 240, 138, 0.85)' : 'rgba(249, 115, 22, 0.75)';
+      ctx.arc(sDist, sSway, sSize, 0, Math.PI * 2);
+      ctx.fillStyle = sPhase < 0.35
+        ? `rgba(254, 240, 138, ${alpha * 0.9})`
+        : (sPhase < 0.7
+          ? `rgba(249, 115, 22, ${alpha * 0.85})`
+          : `rgba(220, 38, 38, ${alpha * 0.6})`);
       ctx.fill();
     }
 
@@ -1006,6 +1028,24 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.fillStyle = '#ffffff';
       ctx.fill();
     }
+  } else if (config.id === BALL_TYPES.FIRE) {
+    // Fire Ball: Radiant Incandescent Sun / Fire Core (matching reference image)
+    const fireCoreGrad = ctx.createRadialGradient(
+      x,
+      y,
+      radius * 0.05,
+      x,
+      y,
+      radius
+    );
+    fireCoreGrad.addColorStop(0, '#ffffff');
+    fireCoreGrad.addColorStop(0.28, '#fef08a');
+    fireCoreGrad.addColorStop(0.58, '#facc15');
+    fireCoreGrad.addColorStop(0.85, '#f97316');
+    fireCoreGrad.addColorStop(1, '#ea580c');
+
+    ctx.fillStyle = fireCoreGrad;
+    ctx.fill();
   } else {
     const lightX = x - radius * 0.35;
     const lightY = y - radius * 0.35;
@@ -1465,9 +1505,11 @@ function BallThumbnailPreview({ config, theme }) {
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, 64, 64);
 
-    const previewRadius = Math.min(20, config.radius * 0.54);
+    const isFire = config.id === BALL_TYPES.FIRE;
+    const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
+    const previewY = isFire ? 44 : 32;
     const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0))));
-    draw3DBall(ctx, 32, 32, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 });
+    draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 });
   }, [config, theme]);
 
   return (
@@ -1676,7 +1718,7 @@ function BallBattleGame() {
       });
       return;
     }
-    sound.play('buttonClick');
+    sound.play('gameStart', 0.95);
 
     const initialBalls = placedBalls.map(b => {
       const spd = b.speed;
@@ -1749,6 +1791,8 @@ function BallBattleGame() {
       particles: [],
       confetti: [],
       trailPoints: [],
+      fireTrails: [],
+      fireImpacts: [],
       conclusionTimer: 0,
       lastTime: performance.now(),
       running: true,
@@ -2470,6 +2514,7 @@ function BallBattleGame() {
           // Drop persistent ground fire patches along its wake
           const spd = Math.hypot(ball.vx, ball.vy);
           if (spd > 0.35 && Math.random() < 0.65) {
+            if (!physicsRef.current.fireTrails) physicsRef.current.fireTrails = [];
             const backAng = Math.atan2(-ball.vy, -ball.vx);
             const dropDist = ball.radius * (0.35 + Math.random() * 0.45);
             physicsRef.current.fireTrails.push({
@@ -2818,6 +2863,7 @@ function BallBattleGame() {
                 sound.play('fireballHit', 0.95);
 
                 // Fiery explosive impact shockwave animation
+                if (!physicsRef.current.fireImpacts) physicsRef.current.fireImpacts = [];
                 physicsRef.current.fireImpacts.push({
                   x: midX,
                   y: midY,
@@ -3204,6 +3250,7 @@ function BallBattleGame() {
                   spawnParticles(hitMidX, hitMidY, '#15803d', 6, 1.2); // scorched leaves
 
                   // Searing thermal blast wave
+                  if (!physicsRef.current.fireImpacts) physicsRef.current.fireImpacts = [];
                   physicsRef.current.fireImpacts.push({
                     x: hitMidX,
                     y: hitMidY,
@@ -3695,7 +3742,7 @@ function BallBattleGame() {
           .some((b, _, arr) => arr.filter(o => o.team === b.team).length > 1);
 
         const motionVec = simState === 'planning'
-          ? (ball.angle !== undefined ? { vx: Math.cos(ball.angle) * 1.5, vy: Math.sin(ball.angle) * 1.5 } : { vx: 0, vy: 0 })
+          ? { vx: 0, vy: 0 }
           : { vx: ball.vx || 0, vy: ball.vy || 0 };
 
         draw3DBall(
