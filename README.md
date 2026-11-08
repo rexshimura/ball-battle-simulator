@@ -1,6 +1,13 @@
-# Ball Battle Simulator
+# Ball Battle Simulator (v1.0.0)
 
 An arcade-style 2D physics battle simulator built with React 19, HTML5 Canvas, WebGL, and Vite.
+
+## Release v1.0.0 Highlights
+- 15 unique ball combat archetypes across 5 rarity tiers (Common, Uncommon, Rare, Unique, Epic).
+- Full 2D physics engine with mass, momentum conservation, and elastic collision restitution.
+- Interactive arena placement, team configuration (Blue vs Red), and replayable match rounds.
+- Real-time WebGL LaserFlow victory illumination with dynamic champion tracking.
+- Immersive sound suite with dedicated spatial audio pooling.
 
 ## Unique Ball Mechanics
 
