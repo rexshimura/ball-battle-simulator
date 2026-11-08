@@ -1,7 +1,7 @@
 # ⚔️ Ball Battle Simulator
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v1.0.0-3b82f6.svg?style=for-the-badge" alt="Release Version v1.0.0" />
+  <img src="https://img.shields.io/badge/Release-v2.0.0-3b82f6.svg?style=for-the-badge" alt="Release Version v2.0.0" />
   <img src="https://img.shields.io/badge/License-Apache_2.0-22c55e.svg?style=for-the-badge" alt="License Apache-2.0" />
   <img src="https://img.shields.io/badge/React-19-61dafb.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
   <img src="https://img.shields.io/badge/Vite-Bundler-646cff.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
