@@ -21,3 +21,14 @@ An arcade-style 2D physics battle simulator built with React 19, HTML5 Canvas, W
 - Direct enemy contact locks on and fires 6 consecutive homing shards (1 DMG each).
 - Inflicts Shard Target status with custom purple crystal trail effects.
 
+## Epic Ball Mechanics
+
+### Thorn Ball (Epic)
+- Direct body impact inflicts -2 -1 Bleed.
+- Bouncing off perimeter walls sprouts permanent creeping floral Thorns into the arena:
+  - **S (~42px)**: Single twisting climbing stalk with root anchors, ivy leaves, and rosebud.
+  - **M (~68px)**: Intertwined dual climbing vines with side branches and thorns.
+  - **L (~96px)**: Braided tree-like vine with lateral shoots and crimson wild rose blossom.
+- Features continuous segment collision detection (`distToSegment`) dealing 2 damage and -1 -1 Bleed to trespassing enemies.
+
+
