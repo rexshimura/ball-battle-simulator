@@ -1,16 +1,15 @@
-# React + Vite
+# Ball Battle Simulator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An arcade-style 2D physics battle simulator built with React 19, HTML5 Canvas, WebGL, and Vite.
 
-Currently, two official plugins are available:
+## Unique Ball Mechanics
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Accelerator Ball (Unique)
+- Accelerates continuously over the course of battle up to 12.0 max speed.
+- Kinetic collision damage scales proportionally with velocity.
+- Emits high-speed streak particle trails and custom impact SFX.
 
-## React Compiler
+### Gun Ball (Unique)
+- Mounted rotating heavy firearm that targets and fires high-caliber projectiles (32 DMG) every 3 seconds.
+- Custom muzzle flare, bullet physics, and ricochet mechanics.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
