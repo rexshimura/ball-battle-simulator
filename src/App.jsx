@@ -144,7 +144,7 @@ const EFFECT_TOOLTIPS = {
     title: 'BURN',
     category: 'STATUS TAG',
     icon: <BurnIcon size={14} color="#f97316" />,
-    description: 'Scorching fire damage dealing consecutive ticks (-2, -2, -1, -1) over time. Unlike puncture bleed, Burn bypasses armor bleed resistances.',
+    description: 'Scorching fire damage dealing 6 consecutive ticks (-4, -3, -2, -1, -1, -1) over an extended duration. Unlike puncture bleed, Burn is true fire damage that bypasses armor bleed resistances.',
   },
 };
 
@@ -2936,21 +2936,21 @@ function BallBattleGame() {
                 }
               }
 
-              // Fire Ball: Direct body collision ignites enemy with Burn (-2, -2, -1, -1)
+              // Fire Ball: Direct body collision ignites enemy with extended Burn (-4, -3, -2, -1, -1, -1)
               if (b1.type === BALL_TYPES.FIRE && b1.team !== b2.team && b2.type !== BALL_TYPES.FIRE && !b2.isDead && !b2.isDying) {
-                b2.burnTicksLeft = 4;
-                b2.burnTimer = 460;
+                b2.burnTicksLeft = 6;
+                b2.burnTimer = 480;
                 b2.burnSource = b1;
-                b2.burnQueue = [2, 2, 1, 1];
+                b2.burnQueue = [4, 3, 2, 1, 1, 1];
                 spawnParticles(b2.x, b2.y, '#f97316', 10, 1.8);
                 spawnParticles(b2.x, b2.y, '#fef08a', 6, 2.0);
               }
 
               if (b2.type === BALL_TYPES.FIRE && b2.team !== b1.team && b1.type !== BALL_TYPES.FIRE && !b1.isDead && !b1.isDying) {
-                b1.burnTicksLeft = 4;
-                b1.burnTimer = 460;
+                b1.burnTicksLeft = 6;
+                b1.burnTimer = 480;
                 b1.burnSource = b2;
-                b1.burnQueue = [2, 2, 1, 1];
+                b1.burnQueue = [4, 3, 2, 1, 1, 1];
                 spawnParticles(b1.x, b1.y, '#f97316', 10, 1.8);
                 spawnParticles(b1.x, b1.y, '#fef08a', 6, 2.0);
               }

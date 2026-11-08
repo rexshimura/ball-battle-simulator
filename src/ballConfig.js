@@ -349,7 +349,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.FIRE,
     name: 'Fire Ball',
     rarity: RARITIES.LEGENDARY,
-    description: 'A raging blazing ball with a perpetual Flaming aura. Struck enemies are ignited with Burn (-2, -2, -1, -1), scorching them with true fire damage over time. Incinerates and completely destroys Thorn Traps on contact.',
+    description: 'A raging blazing ball with a perpetual Flaming aura. Struck enemies are ignited with Burn (-4, -3, -2, -1, -1, -1), scorching them with true fire damage over an extended duration. Incinerates and completely destroys Thorn Traps on contact.',
     baseHp: 100,
     damage: 9,
     speed: 2.3,
@@ -360,7 +360,7 @@ export const BALL_CONFIGS = {
     shadowColor: '#7c2d12',    // deep dark ember charcoal shadow
     flameColor: '#f97316',
     special: 'Flaming & Burn (Burns Thorns)',
-    inflicts: 'Burn (-2 -2 -1 -1)',
+    inflicts: 'Burn (-4 -3 -2 -1 -1 -1)',
   },
 };
 
