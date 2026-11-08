@@ -352,10 +352,10 @@ export const BALL_CONFIGS = {
     speed: 2.1,
     radius: 38,
     mass: 1.15,
-    bodyColor: '#14532d',      // Dark green
-    highlightColor: '#4ade80', // bright lime/green highlight
-    shadowColor: '#052e16',    // deep dark forest green shadow
-    thornColor: '#166534',
+    bodyColor: '#166534',      // Rich dark briar green
+    highlightColor: '#4ade80', // Vibrant briar green highlight
+    shadowColor: '#022c22',    // Deep obsidian forest shadow
+    thornColor: '#15803d',
     special: 'Thorns & Bleed',
     trapDamage: 2,
   },

@@ -184,23 +184,6 @@ function drawBloomFlower(ctx, fx, fy, flowerRadius, petalColor = '#f43f5e', cent
   ctx.restore();
 }
 
-// Leaf renderer for creeping vines
-function drawLeaf(ctx, lx, ly, leafLen, leafAng, leafColor = '#22c55e') {
-  ctx.save();
-  ctx.translate(lx, ly);
-  ctx.rotate(leafAng);
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(leafLen * 0.5, -leafLen * 0.45, leafLen, 0);
-  ctx.quadraticCurveTo(leafLen * 0.5, leafLen * 0.45, 0, 0);
-  ctx.fillStyle = leafColor;
-  ctx.fill();
-  ctx.strokeStyle = '#14532d';
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
-  ctx.restore();
-}
-
 // Heart-shaped ivy leaf renderer matching climbing vine references
 function drawIvyLeaf(ctx, lx, ly, leafLen, leafAng, leafColor = '#16a34a', isLight = false) {
   ctx.save();
@@ -223,6 +206,90 @@ function drawIvyLeaf(ctx, lx, ly, leafLen, leafAng, leafColor = '#16a34a', isLig
   ctx.strokeStyle = isLight ? '#4ade80' : '#86efac';
   ctx.lineWidth = 0.6;
   ctx.stroke();
+  ctx.restore();
+}
+
+// Realistic Briar Rosebud / Floral knot for Thorn Ball
+function drawBriarRoseBud(ctx, bx, by, size, angle, isHit = false) {
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(angle);
+
+  // Outer dark sepals
+  ctx.fillStyle = isHit ? '#ffffff' : '#052e16';
+  for (let s = -1; s <= 1; s += 2) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(s * size * 0.7, -size * 0.4, s * size * 0.9, size * 0.2);
+    ctx.quadraticCurveTo(s * size * 0.3, size * 0.3, 0, 0);
+    ctx.fill();
+  }
+
+  // Layered crimson rose petals
+  ctx.fillStyle = isHit ? '#ffffff' : '#9f1239'; // deep velvet crimson
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.75, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = isHit ? '#ffffff' : '#e11d48'; // vibrant ruby
+  ctx.beginPath();
+  ctx.arc(-size * 0.1, -size * 0.1, size * 0.52, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = isHit ? '#ffffff' : '#f43f5e'; // petal highlight
+  ctx.beginPath();
+  ctx.arc(-size * 0.15, -size * 0.15, size * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Core golden stamen dot
+  ctx.fillStyle = isHit ? '#ffffff' : '#fef08a';
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// 3D Forward-facing thorn spike on the sphere surface
+function drawSurfaceThorn(ctx, sx, sy, size, angle, isHit = false) {
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(angle);
+
+  // Cast shadow on sphere
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.beginPath();
+  ctx.ellipse(size * 0.3, size * 0.25, size * 0.7, size * 0.35, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Thorn spine cone
+  ctx.beginPath();
+  ctx.moveTo(-size * 0.5, size * 0.4);
+  ctx.lineTo(size * 0.8, -size * 0.5); // sharp tip
+  ctx.lineTo(size * 0.4, size * 0.5);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(-size * 0.5, size * 0.5, size * 0.8, -size * 0.5);
+  if (isHit) {
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#ffffff');
+  } else {
+    grad.addColorStop(0, '#052e16');
+    grad.addColorStop(0.5, '#15803d');
+    grad.addColorStop(0.85, '#86efac');
+    grad.addColorStop(1, '#f43f5e'); // crimson puncture tip
+  }
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Sharp highlight line
+  ctx.beginPath();
+  ctx.moveTo(0, size * 0.4);
+  ctx.lineTo(size * 0.8, -size * 0.5);
+  ctx.strokeStyle = isHit ? '#ffffff' : 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -925,81 +992,106 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // 10 Organic curved bramble thorns around Thorn Ball with blooming flowers and vines
+  // 12 Curved Razor Briar Thorns & Braided Collar around Thorn Ball
   if (config.id === BALL_TYPES.THORN) {
-    const thornCount = 10;
-    const thornLen = radius * 0.35;
+    const thornCount = 12;
 
-    // Weaving vine base ring connecting thorns
+    // Braided root vine ring wrapping the sphere perimeter
     ctx.save();
-    ctx.strokeStyle = isLight ? '#14532d' : '#15803d';
-    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = isLight ? '#052e16' : '#022c22';
+    ctx.lineWidth = Math.max(3.2, radius * 0.09);
     ctx.beginPath();
-    for (let t = 0; t < thornCount; t++) {
-      const tAng = rotationAngle + (t * Math.PI * 2) / thornCount;
-      const vx = x + Math.cos(tAng) * (radius - 1);
-      const vy = y + Math.sin(tAng) * (radius - 1);
-      if (t === 0) ctx.moveTo(vx, vy);
-      else ctx.lineTo(vx, vy);
-    }
-    ctx.closePath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.stroke();
+
+    ctx.strokeStyle = isLight ? '#15803d' : '#16a34a';
+    ctx.lineWidth = Math.max(1.6, radius * 0.045);
+    ctx.stroke();
+
+    ctx.strokeStyle = isLight ? '#4ade80' : '#86efac';
+    ctx.lineWidth = Math.max(0.8, radius * 0.02);
+    ctx.setLineDash([4, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
     ctx.restore();
 
     for (let t = 0; t < thornCount; t++) {
+      const isPrimary = t % 2 === 0;
       const tAng = rotationAngle + (t * Math.PI * 2) / thornCount;
-      const baseDist = radius - 3;
-      const tipDist = radius + thornLen;
-      const bx = x + Math.cos(tAng) * baseDist;
-      const by = y + Math.sin(tAng) * baseDist;
-      const tx = x + Math.cos(tAng) * tipDist;
-      const ty = y + Math.sin(tAng) * tipDist;
+      const thornLen = isPrimary ? radius * 0.46 : radius * 0.28;
+      const baseSpan = isPrimary ? 0.20 : 0.14; // angular width at base
 
-      // Perpendicular vector for curved thorn base
-      const perpX = -Math.sin(tAng) * (radius * 0.12);
-      const perpY = Math.cos(tAng) * (radius * 0.12);
+      // Base points on ball edge
+      const a1 = tAng - baseSpan;
+      const a2 = tAng + baseSpan;
+      const bx1 = x + Math.cos(a1) * (radius - 1);
+      const by1 = y + Math.sin(a1) * (radius - 1);
+      const bx2 = x + Math.cos(a2) * (radius - 1);
+      const by2 = y + Math.sin(a2) * (radius - 1);
+
+      // Curved tip (swept in direction of rotation)
+      const tipDist = radius + thornLen;
+      const tipAng = tAng + (isPrimary ? 0.14 : 0.09);
+      const tx = x + Math.cos(tipAng) * tipDist;
+      const ty = y + Math.sin(tipAng) * tipDist;
+
+      // Base center
+      const rootX = x + Math.cos(tAng) * radius;
+      const rootY = y + Math.sin(tAng) * radius;
+
+      // Outer convex curve control point
+      const cpOuterX = x + Math.cos(a1 + 0.08) * (radius + thornLen * 0.52);
+      const cpOuterY = y + Math.sin(a1 + 0.08) * (radius + thornLen * 0.52);
+
+      // Inner concave curve control point
+      const cpInnerX = x + Math.cos(a2 + 0.04) * (radius + thornLen * 0.44);
+      const cpInnerY = y + Math.sin(a2 + 0.04) * (radius + thornLen * 0.44);
 
       ctx.save();
+
+      // Main thorn shape
       ctx.beginPath();
-      ctx.moveTo(bx - perpX, by - perpY);
-      ctx.quadraticCurveTo(bx + perpX * 0.4, by + perpY * 0.4, tx, ty);
-      ctx.quadraticCurveTo(bx + perpX * 0.1, by + perpY * 0.1, bx + perpX, by + perpY);
+      ctx.moveTo(bx1, by1);
+      ctx.quadraticCurveTo(cpOuterX, cpOuterY, tx, ty);
+      ctx.quadraticCurveTo(cpInnerX, cpInnerY, bx2, by2);
       ctx.closePath();
 
-      const thornGrad = ctx.createLinearGradient(bx, by, tx, ty);
+      const thornGrad = ctx.createLinearGradient(rootX, rootY, tx, ty);
       if (isHit) {
         thornGrad.addColorStop(0, '#ffffff');
         thornGrad.addColorStop(1, '#ffffff');
       } else {
         thornGrad.addColorStop(0, '#052e16');
-        thornGrad.addColorStop(0.5, '#166534');
-        thornGrad.addColorStop(1, '#86efac'); // needle-sharp toxic lime tip
+        thornGrad.addColorStop(0.45, '#166534');
+        thornGrad.addColorStop(0.8, '#4ade80');
+        thornGrad.addColorStop(0.94, '#a7f3d0');
+        thornGrad.addColorStop(1, '#f43f5e'); // crimson puncture tip
       }
       ctx.fillStyle = thornGrad;
       ctx.fill();
-      ctx.strokeStyle = isLight ? '#052e16' : '#4ade80';
-      ctx.lineWidth = 1;
+
+      // Shadow facet on the trailing side
+      if (!isHit) {
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        ctx.lineTo(tx, ty);
+        ctx.quadraticCurveTo(cpInnerX, cpInnerY, bx2, by2);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(2, 44, 34, 0.55)';
+        ctx.fill();
+
+        // High-contrast spine highlight down the center
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        ctx.quadraticCurveTo((rootX + tx) * 0.5 - Math.sin(tAng) * 2, (rootY + ty) * 0.5 + Math.cos(tAng) * 2, tx, ty);
+        ctx.strokeStyle = 'rgba(220, 252, 231, 0.75)';
+        ctx.lineWidth = Math.max(0.7, radius * 0.022);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = isLight ? '#022c22' : '#052e16';
+      ctx.lineWidth = Math.max(1, radius * 0.026);
       ctx.stroke();
-
-      // Leaf pairs sprouting off the sides of alternate thorns
-      if (t % 2 === 0) {
-        const midThornX = (bx + tx) * 0.5;
-        const midThornY = (by + ty) * 0.5;
-        drawLeaf(ctx, midThornX, midThornY, radius * 0.18, tAng + 0.8, '#22c55e');
-      }
-
-      // Blooming wild rose flowers nestled at thorn bases
-      if (t % 3 === 0) {
-        const flowerDist = radius + 2;
-        const fx = x + Math.cos(tAng + 0.18) * flowerDist;
-        const fy = y + Math.sin(tAng + 0.18) * flowerDist;
-        drawBloomFlower(ctx, fx, fy, radius * 0.16, '#f43f5e', '#fde047', tAng);
-      } else if (t % 3 === 1) {
-        const flowerDist = radius + 1;
-        const fx = x + Math.cos(tAng - 0.16) * flowerDist;
-        const fy = y + Math.sin(tAng - 0.16) * flowerDist;
-        drawBloomFlower(ctx, fx, fy, radius * 0.12, '#fb7185', '#fde047', tAng + 0.5);
-      }
 
       ctx.restore();
     }
@@ -1267,48 +1359,78 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
-    // Thorn Ball: Criss-crossing bramble vine tendrils etched across the body with blooming flowers
+    // Thorn Ball: Woven bramble lattice with 3D forward-facing thorns & velvet briar rosebuds
     if (config.id === BALL_TYPES.THORN) {
       ctx.save();
       ctx.clip();
-      ctx.strokeStyle = '#052e16';
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 0.62, rotationAngle, rotationAngle + Math.PI * 1.4);
-      ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 0.38, rotationAngle + Math.PI * 0.6, rotationAngle + Math.PI * 1.9);
-      ctx.stroke();
+      // Intertwining thick curved bramble vine bands wrapped across the spherical face
+      const vineBands = [
+        { cx: x - radius * 0.22, cy: y - radius * 0.18, rx: radius * 0.88, ry: radius * 0.54, rot: rotationAngle + 0.35 },
+        { cx: x + radius * 0.18, cy: y + radius * 0.22, rx: radius * 0.78, ry: radius * 0.46, rot: rotationAngle - 1.15 },
+        { cx: x, cy: y, rx: radius * 0.62, ry: radius * 0.62, rot: rotationAngle + 1.85 },
+      ];
 
-      // Branching vine prickles and leaves
-      [0.2, 0.7, 1.2, 1.7].forEach(angOff => {
-        const pAng = rotationAngle + angOff * Math.PI;
-        const px1 = x + Math.cos(pAng) * (radius * 0.5);
-        const py1 = y + Math.sin(pAng) * (radius * 0.5);
-        const px2 = x + Math.cos(pAng + 0.3) * (radius * 0.75);
-        const py2 = y + Math.sin(pAng + 0.3) * (radius * 0.75);
+      vineBands.forEach(v => {
+        // Drop shadow for vine band
+        ctx.save();
+        ctx.translate(v.cx, v.cy);
+        ctx.rotate(v.rot);
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.lineWidth = Math.max(3.6, radius * 0.11);
         ctx.beginPath();
-        ctx.moveTo(px1, py1);
-        ctx.lineTo(px2, py2);
-        ctx.strokeStyle = '#15803d';
-        ctx.lineWidth = 1.6;
+        ctx.ellipse(1.5, 2, v.rx, v.ry, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Mini leaves along branching vines
-        drawLeaf(ctx, px2, py2, radius * 0.16, pAng + 0.4, '#22c55e');
+        // Main woody vine cord
+        ctx.strokeStyle = isHit ? '#ffffff' : '#052e16';
+        ctx.lineWidth = Math.max(3.2, radius * 0.095);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, v.rx, v.ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Midtone organic bark & spine highlight
+        if (!isHit) {
+          ctx.strokeStyle = '#15803d';
+          ctx.lineWidth = Math.max(1.8, radius * 0.055);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#86efac';
+          ctx.lineWidth = Math.max(0.7, radius * 0.02);
+          ctx.setLineDash([8, 8]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.restore();
       });
 
-      // Blooming wild rose flowers embedded on the surface vines
-      const fl1X = x + Math.cos(rotationAngle + 0.4) * (radius * 0.58);
-      const fl1Y = y + Math.sin(rotationAngle + 0.4) * (radius * 0.58);
-      drawBloomFlower(ctx, fl1X, fl1Y, radius * 0.18, '#f43f5e', '#fde047', rotationAngle + 0.3);
+      // 4 Surface forward-facing 3D Thorn Spikes situated along vine junctions
+      const surfaceThorns = [
+        { dist: radius * 0.45, ang: rotationAngle + 0.6, size: radius * 0.24, dir: rotationAngle + 0.8 },
+        { dist: radius * 0.55, ang: rotationAngle + 2.4, size: radius * 0.22, dir: rotationAngle + 2.7 },
+        { dist: radius * 0.35, ang: rotationAngle + 3.8, size: radius * 0.26, dir: rotationAngle + 4.1 },
+        { dist: radius * 0.58, ang: rotationAngle + 5.1, size: radius * 0.23, dir: rotationAngle + 5.3 },
+      ];
 
-      const fl2X = x + Math.cos(rotationAngle + 2.2) * (radius * 0.42);
-      const fl2Y = y + Math.sin(rotationAngle + 2.2) * (radius * 0.42);
-      drawBloomFlower(ctx, fl2X, fl2Y, radius * 0.15, '#fb7185', '#fde047', rotationAngle - 0.5);
+      surfaceThorns.forEach(st => {
+        const sx = x + Math.cos(st.ang) * st.dist;
+        const sy = y + Math.sin(st.ang) * st.dist;
+        drawSurfaceThorn(ctx, sx, sy, st.size, st.dir, isHit);
+      });
+
+      // 2 Elegant Crimson Briar Rosebuds nestled in vine crossings
+      const buds = [
+        { dist: radius * 0.42, ang: rotationAngle + 1.5, size: radius * 0.18, rot: rotationAngle + 0.4 },
+        { dist: radius * 0.48, ang: rotationAngle + 4.5, size: radius * 0.16, rot: rotationAngle + 2.2 },
+      ];
+
+      buds.forEach(b => {
+        const bx = x + Math.cos(b.ang) * b.dist;
+        const by = y + Math.sin(b.ang) * b.dist;
+        drawBriarRoseBud(ctx, bx, by, b.size, b.rot, isHit);
+      });
 
       ctx.restore();
     }
