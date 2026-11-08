@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES } from './ballConfig';
+import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
 import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
@@ -4551,6 +4551,12 @@ function BallBattleGame() {
           <div className="sidebar-ball-list">
             {Object.values(BALL_CONFIGS)
               .filter(ball => rarityFilter === 'ALL' || ball.rarity === rarityFilter)
+              .sort((a, b) => {
+                const orderA = RARITY_ORDER.indexOf(a.rarity);
+                const orderB = RARITY_ORDER.indexOf(b.rarity);
+                if (orderA !== orderB) return orderA - orderB;
+                return 0;
+              })
               .map(ball => {
               const isSelected = selectedBallType === ball.id;
               return (

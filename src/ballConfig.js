@@ -1,22 +1,33 @@
 // Ball Battle Configurations
 
 export const BALL_TYPES = {
+  // Common
   NORMAL: 'NORMAL',
   FAST: 'FAST',
   BIG: 'BIG',
+
+  // Uncommon
   STONE: 'STONE',
-  STEEL: 'STEEL',
+  KNIFE: 'KNIFE',
   SWORD: 'SWORD',
   SPIKE: 'SPIKE',
+
+  // Rare
+  STEEL: 'STEEL',
   GLASS: 'GLASS',
   HAMMER: 'HAMMER',
   GROW: 'GROW',
-  KNIFE: 'KNIFE',
+
+  // Unique
   ACCELERATOR: 'ACCELERATOR',
-  SHARD: 'SHARD',
   GUN: 'GUN',
-  THORN: 'THORN',
   MULTI: 'MULTI',
+
+  // Epic
+  SHARD: 'SHARD',
+  THORN: 'THORN',
+
+  // Legendary
   FIRE: 'FIRE',
 };
 
@@ -30,9 +41,22 @@ export const RARITIES = {
   MYTHICAL: 'Mythical',
 };
 
+export const RARITY_ORDER = [
+  RARITIES.COMMON,
+  RARITIES.UNCOMMON,
+  RARITIES.RARE,
+  RARITIES.UNIQUE,
+  RARITIES.EPIC,
+  RARITIES.LEGENDARY,
+  RARITIES.MYTHICAL,
+];
+
 // All balls have a base HP of 100
 // Radii made bigger for better visibility & presence in the arena
 export const BALL_CONFIGS = {
+  // ==========================================
+  // COMMON TIER
+  // ==========================================
   [BALL_TYPES.NORMAL]: {
     id: BALL_TYPES.NORMAL,
     name: 'Normal Ball',
@@ -78,6 +102,10 @@ export const BALL_CONFIGS = {
     shadowColor: '#52525b',
     special: null,
   },
+
+  // ==========================================
+  // UNCOMMON TIER
+  // ==========================================
   [BALL_TYPES.STONE]: {
     id: BALL_TYPES.STONE,
     name: 'Stone Ball',
@@ -95,21 +123,23 @@ export const BALL_CONFIGS = {
     hasArmor: true, // Immune to bleed effects
     special: 'Heavy (+30% HP) & Armored',
   },
-  [BALL_TYPES.STEEL]: {
-    id: BALL_TYPES.STEEL,
-    name: 'Steel Ball',
-    rarity: RARITIES.RARE,
-    description: 'Gains a kinetic energy barrier shield (+20 Shield) every 4 hits taken.',
+  [BALL_TYPES.KNIFE]: {
+    id: BALL_TYPES.KNIFE,
+    name: 'Knife Ball',
+    rarity: RARITIES.UNCOMMON,
+    description: 'Equipped with a compact combat knife that spins rapidly at double speed, slashing nearby enemies in close quarters.',
     baseHp: 100,
-    damage: 11,
-    speed: 2.1,
-    radius: 39, // increased size
-    mass: 1.8,
-    bodyColor: '#cbd5e1',      // metallic polished steel
-    highlightColor: '#ffffff', // bright chrome sheen
-    shadowColor: '#475569',    // deep gunmetal shadow
-    special: 'Shield on 4 Hits',
-    shieldAmount: 20,
+    damage: 7,         // Body hitbox deals lower bump damage
+    knifeDamage: 15,   // Rapid spinning knife blade deals 15 damage
+    speed: 2.3,
+    radius: 37,
+    mass: 1.05,
+    bodyColor: '#4b5563',      // gray body
+    highlightColor: '#9ca3af', // lighter gray highlight
+    shadowColor: '#1f2937',    // deep dark gray shadow
+    knifeColor: '#cbd5e1',     // steel blade
+    special: 'Rapid Spinning Knife',
+    knifeLength: 28,           // compact combat knife blade
   },
   [BALL_TYPES.SWORD]: {
     id: BALL_TYPES.SWORD,
@@ -144,6 +174,26 @@ export const BALL_CONFIGS = {
     spikeColor: '#1f2937',     // dark gray spikes
     hasArmor: true,            // Immune to bleed effects
     special: 'Puncture Spikes & Armored',
+  },
+
+  // ==========================================
+  // RARE TIER
+  // ==========================================
+  [BALL_TYPES.STEEL]: {
+    id: BALL_TYPES.STEEL,
+    name: 'Steel Ball',
+    rarity: RARITIES.RARE,
+    description: 'Gains a kinetic energy barrier shield (+20 Shield) every 4 hits taken.',
+    baseHp: 100,
+    damage: 11,
+    speed: 2.1,
+    radius: 39, // increased size
+    mass: 1.8,
+    bodyColor: '#cbd5e1',      // metallic polished steel
+    highlightColor: '#ffffff', // bright chrome sheen
+    shadowColor: '#475569',    // deep gunmetal shadow
+    special: 'Shield on 4 Hits',
+    shieldAmount: 20,
   },
   [BALL_TYPES.GLASS]: {
     id: BALL_TYPES.GLASS,
@@ -196,24 +246,10 @@ export const BALL_CONFIGS = {
     shadowColor: '#15803d',
     special: 'Size Grow & Heavy (2.8+)',
   },
-  [BALL_TYPES.KNIFE]: {
-    id: BALL_TYPES.KNIFE,
-    name: 'Knife Ball',
-    rarity: RARITIES.UNCOMMON,
-    description: 'Equipped with a compact combat knife that spins rapidly at double speed, slashing nearby enemies in close quarters.',
-    baseHp: 100,
-    damage: 7,         // Body hitbox deals lower bump damage
-    knifeDamage: 15,   // Rapid spinning knife blade deals 15 damage
-    speed: 2.3,
-    radius: 37,
-    mass: 1.05,
-    bodyColor: '#4b5563',      // gray body
-    highlightColor: '#9ca3af', // lighter gray highlight
-    shadowColor: '#1f2937',    // deep dark gray shadow
-    knifeColor: '#cbd5e1',     // steel blade
-    special: 'Rapid Spinning Knife',
-    knifeLength: 28,           // compact combat knife blade
-  },
+
+  // ==========================================
+  // UNIQUE TIER
+  // ==========================================
   [BALL_TYPES.ACCELERATOR]: {
     id: BALL_TYPES.ACCELERATOR,
     name: 'Accelerator Ball',
@@ -231,22 +267,6 @@ export const BALL_CONFIGS = {
     highlightColor: '#93c5fa', // bright electric blue glint
     shadowColor: '#172554',    // midnight deep blue shadow
     special: 'Rapid & Accelerate (Damage with Speed)',
-  },
-  [BALL_TYPES.SHARD]: {
-    id: BALL_TYPES.SHARD,
-    name: 'Shard Ball',
-    rarity: RARITIES.EPIC,
-    description: 'Striking an enemy locks onto them and shoots 6 consecutive homing shards that deal 1 damage each.',
-    baseHp: 100,
-    damage: 8,
-    speed: 2.2,
-    radius: 34,
-    mass: 1.0,
-    bodyColor: '#581c87',      // Dark purple
-    highlightColor: '#c084fc', // purple glint
-    shadowColor: '#2e1065',    // deep dark purple
-    special: 'Shard',
-    inflicts: 'Shard Target',
   },
   [BALL_TYPES.GUN]: {
     id: BALL_TYPES.GUN,
@@ -283,6 +303,26 @@ export const BALL_CONFIGS = {
     special: 'Split on Death',
     splitStage: 1,
   },
+
+  // ==========================================
+  // EPIC TIER
+  // ==========================================
+  [BALL_TYPES.SHARD]: {
+    id: BALL_TYPES.SHARD,
+    name: 'Shard Ball',
+    rarity: RARITIES.EPIC,
+    description: 'Striking an enemy locks onto them and shoots 6 consecutive homing shards that deal 1 damage each.',
+    baseHp: 100,
+    damage: 8,
+    speed: 2.2,
+    radius: 34,
+    mass: 1.0,
+    bodyColor: '#581c87',      // Dark purple
+    highlightColor: '#c084fc', // purple glint
+    shadowColor: '#2e1065',    // deep dark purple
+    special: 'Shard',
+    inflicts: 'Shard Target',
+  },
   [BALL_TYPES.THORN]: {
     id: BALL_TYPES.THORN,
     name: 'Thorn Ball',
@@ -300,6 +340,10 @@ export const BALL_CONFIGS = {
     special: 'Thorns & Bleed',
     trapDamage: 2,
   },
+
+  // ==========================================
+  // LEGENDARY TIER
+  // ==========================================
   [BALL_TYPES.FIRE]: {
     id: BALL_TYPES.FIRE,
     name: 'Fire Ball',
