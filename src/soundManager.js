@@ -34,6 +34,7 @@ const SFX_FILES = {
   fireballBurn: '/sfx/sfx-ball-fireball-burn.mp3',
   fireballHit: '/sfx/sfx-ball-fireball-hit.mp3',
   fireballHitWall: '/sfx/sfx-ball-fireball-hitwall.mp3',
+  fireballLoop: '/sfx/sfx-ball-fireball-passive-sound-loop.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
@@ -67,6 +68,7 @@ class SoundManager {
     this.isMuted = false;
     this.masterVolume = 0.8;
     this.poolSize = 4;
+    this.loops = {};
 
     try {
       const savedMute = localStorage.getItem('ball_battles_muted');
@@ -130,6 +132,43 @@ class SoundManager {
     }
   }
 
+  startLoop(name, volumeMultiplier = 0.5) {
+    if (this.isMuted) return;
+    if (this.loops[name] && !this.loops[name].paused) return;
+
+    const src = SFX_FILES[name];
+    if (!src) return;
+
+    try {
+      const audio = new Audio(src);
+      audio.loop = true;
+      audio.volume = Math.max(0, Math.min(1, this.masterVolume * volumeMultiplier));
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+      this.loops[name] = audio;
+    } catch {
+      // Audio playback exception handling
+    }
+  }
+
+  stopLoop(name) {
+    if (!this.loops || !this.loops[name]) return;
+    try {
+      this.loops[name].pause();
+      this.loops[name].currentTime = 0;
+    } catch {
+      // ignore
+    }
+    delete this.loops[name];
+  }
+
+  stopAllLoops() {
+    if (!this.loops) return;
+    Object.keys(this.loops).forEach(name => this.stopLoop(name));
+  }
+
   toggleMute() {
     this.isMuted = !this.isMuted;
     try {
@@ -137,11 +176,29 @@ class SoundManager {
     } catch {
       // ignore
     }
+    if (this.isMuted) {
+      if (this.loops) {
+        Object.values(this.loops).forEach(audio => {
+          try { audio.pause(); } catch { /* ignore */ }
+        });
+      }
+    } else {
+      if (this.loops) {
+        Object.values(this.loops).forEach(audio => {
+          try { audio.play(); } catch { /* ignore */ }
+        });
+      }
+    }
     return this.isMuted;
   }
 
   setVolume(vol) {
     this.masterVolume = Math.max(0, Math.min(1, vol));
+    if (this.loops) {
+      Object.values(this.loops).forEach(audio => {
+        try { audio.volume = this.masterVolume * 0.5; } catch { /* ignore */ }
+      });
+    }
   }
 }
 

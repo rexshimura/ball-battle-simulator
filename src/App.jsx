@@ -455,9 +455,23 @@ function drawThornTrap(ctx, trap, isLight = false) {
 }
 
 // 3D Sphere Renderer with accessories
-function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isHit = false, shield = 0, theme = 'dark', missingNotches = []) {
+function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isHit = false, shield = 0, theme = 'dark', missingNotches = [], motionVector = null) {
   ctx.save();
   const isLight = theme === 'light';
+
+  let flameAngle = -Math.PI / 2; // Default: Fire goes straight UPWARDS (-y)
+  let flameSpeed = 0;
+  if (motionVector) {
+    const vx = motionVector.vx || 0;
+    const vy = motionVector.vy || 0;
+    const spd = Math.hypot(vx, vy);
+    flameSpeed = spd;
+    if (spd > 0.15) {
+      const dragX = -vx;
+      const dragY = -vy - Math.max(0.6, spd * 0.28);
+      flameAngle = Math.atan2(dragY, dragX);
+    }
+  }
 
   // Spikes for Spike Ball
   if (config.id === BALL_TYPES.SPIKE) {
@@ -838,59 +852,141 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Fire Ball: Radiant blazing heat bloom & licking outer flame tongues
+  // Fire Ball: Literal roaring fire streaming in flameAngle (Upwards by default, or behind motion)
   if (config.id === BALL_TYPES.FIRE) {
     ctx.save();
-    // Warm radiant heat aura blooming outwards
-    const heatBloom = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius * 1.55);
-    heatBloom.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
-    heatBloom.addColorStop(0.5, 'rgba(234, 88, 12, 0.22)');
-    heatBloom.addColorStop(1, 'rgba(239, 68, 68, 0)');
-    ctx.fillStyle = heatBloom;
+    ctx.translate(x, y);
+    ctx.rotate(flameAngle);
+
+    const lengthScale = 1.0 + Math.min(1.4, flameSpeed * 0.28);
+    const flickerTime = rotationAngle * 4;
+
+    // 1. Broad Ambient Heat & Glow Bloom expanding in flame direction
+    const bloomGrad = ctx.createRadialGradient(radius * 0.2, 0, radius * 0.2, radius * 0.5 * lengthScale, 0, radius * 2.1 * lengthScale);
+    bloomGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+    bloomGrad.addColorStop(0.3, 'rgba(249, 115, 22, 0.35)');
+    bloomGrad.addColorStop(0.65, 'rgba(220, 38, 38, 0.18)');
+    bloomGrad.addColorStop(1, 'rgba(124, 45, 18, 0)');
+    ctx.fillStyle = bloomGrad;
     ctx.beginPath();
-    ctx.arc(x, y, radius * 1.55, 0, Math.PI * 2);
+    ctx.ellipse(radius * 0.5 * lengthScale, 0, radius * 1.8 * lengthScale, radius * 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 12 dynamic licking flame tongues around perimeter
-    const flameTongues = 12;
-    for (let f = 0; f < flameTongues; f++) {
-      const fAng = rotationAngle * 1.6 + (f * Math.PI * 2) / flameTongues;
-      const waveMod = Math.sin(fAng * 3 + rotationAngle * 3.5);
-      const flameLen = radius * (0.28 + 0.16 * waveMod);
-      const fxTip = x + Math.cos(fAng) * (radius + flameLen);
-      const fyTip = y + Math.sin(fAng) * (radius + flameLen);
-      const bAng1 = fAng + 0.19;
-      const bAng2 = fAng - 0.19;
+    // 2. Outer Layer: Deep Crimson & Molten Blaze Tongue Silhouettes
+    const outerTongues = 9;
+    for (let t = 0; t < outerTongues; t++) {
+      const norm = (t / (outerTongues - 1)) * 2 - 1; // -1 to +1 across the ball width
+      const baseY = norm * (radius * 0.88);
+      const baseX = Math.sqrt(Math.max(0, radius * radius - baseY * baseY)) * 0.25;
+
+      const wave1 = Math.sin(flickerTime * 2.5 + t * 1.7);
+      const wave2 = Math.cos(flickerTime * 3.8 + t * 2.1);
+      const tongueLen = radius * (1.1 + 0.75 * (1 - Math.abs(norm) * 0.35) * lengthScale + 0.28 * wave1);
+      const tipX = baseX + tongueLen;
+      const tipY = baseY * 0.45 + wave2 * (radius * 0.22);
+
+      const cp1X = baseX + tongueLen * 0.4;
+      const cp1Y = baseY * 1.25 + wave1 * 6;
+      const cp2X = baseX + tongueLen * 0.75;
+      const cp2Y = tipY + wave2 * 5;
 
       ctx.beginPath();
-      ctx.moveTo(x + Math.cos(bAng1) * (radius - 2), y + Math.sin(bAng1) * (radius - 2));
-      ctx.quadraticCurveTo(
-        x + Math.cos(fAng) * (radius + flameLen * 0.45) - Math.sin(fAng) * 4,
-        y + Math.sin(fAng) * (radius + flameLen * 0.45) + Math.cos(fAng) * 4,
-        fxTip,
-        fyTip
-      );
-      ctx.quadraticCurveTo(
-        x + Math.cos(fAng) * (radius + flameLen * 0.45) + Math.sin(fAng) * 3,
-        y + Math.sin(fAng) * (radius + flameLen * 0.45) - Math.cos(fAng) * 3,
-        x + Math.cos(bAng2) * (radius - 2),
-        y + Math.sin(bAng2) * (radius - 2)
-      );
+      ctx.moveTo(baseX, baseY);
+      ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, tipX, tipY);
+      ctx.bezierCurveTo(cp2X, cp2Y - norm * 6, cp1X, baseY * 0.6, baseX, baseY * 0.3);
       ctx.closePath();
 
-      const fGrad = ctx.createLinearGradient(x + Math.cos(fAng) * radius, y + Math.sin(fAng) * radius, fxTip, fyTip);
+      const outGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
       if (isHit) {
-        fGrad.addColorStop(0, '#ffffff');
-        fGrad.addColorStop(1, '#ffffff');
+        outGrad.addColorStop(0, '#ffffff');
+        outGrad.addColorStop(1, '#ffffff');
       } else {
-        fGrad.addColorStop(0, '#ea580c');
-        fGrad.addColorStop(0.45, '#f97316');
-        fGrad.addColorStop(0.85, '#fef08a');
-        fGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        outGrad.addColorStop(0, '#ea580c');
+        outGrad.addColorStop(0.5, '#f97316');
+        outGrad.addColorStop(0.85, '#dc2626');
+        outGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
       }
-      ctx.fillStyle = fGrad;
+      ctx.fillStyle = outGrad;
       ctx.fill();
     }
+
+    // 3. Mid Layer: Blazing Vivid Orange & Amber Fire Flames
+    const midTongues = 7;
+    for (let t = 0; t < midTongues; t++) {
+      const norm = (t / (midTongues - 1)) * 2 - 1;
+      const baseY = norm * (radius * 0.65);
+      const baseX = Math.sqrt(Math.max(0, radius * radius - baseY * baseY)) * 0.4;
+
+      const wave1 = Math.cos(flickerTime * 3.2 + t * 2.3);
+      const wave2 = Math.sin(flickerTime * 4.1 + t * 1.9);
+      const tongueLen = radius * (0.8 + 0.65 * (1 - Math.abs(norm) * 0.3) * lengthScale + 0.22 * wave1);
+      const tipX = baseX + tongueLen;
+      const tipY = baseY * 0.35 + wave2 * (radius * 0.16);
+
+      ctx.beginPath();
+      ctx.moveTo(baseX, baseY);
+      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, baseY * 1.1 + wave1 * 5, tipX, tipY);
+      ctx.quadraticCurveTo(baseX + tongueLen * 0.6, baseY * 0.2, baseX, baseY * 0.2);
+      ctx.closePath();
+
+      const midGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
+      if (isHit) {
+        midGrad.addColorStop(0, '#ffffff');
+        midGrad.addColorStop(1, '#ffffff');
+      } else {
+        midGrad.addColorStop(0, '#f97316');
+        midGrad.addColorStop(0.55, '#facc15');
+        midGrad.addColorStop(1, 'rgba(250, 204, 21, 0)');
+      }
+      ctx.fillStyle = midGrad;
+      ctx.fill();
+    }
+
+    // 4. Inner Layer: White-Hot Solar Core Flame
+    const coreTongues = 5;
+    for (let t = 0; t < coreTongues; t++) {
+      const norm = (t / (coreTongues - 1)) * 2 - 1;
+      const baseY = norm * (radius * 0.4);
+      const baseX = radius * 0.2;
+
+      const wave = Math.sin(flickerTime * 5.0 + t * 3.1);
+      const tongueLen = radius * (0.55 + 0.4 * (1 - Math.abs(norm) * 0.4) * lengthScale + 0.15 * wave);
+      const tipX = baseX + tongueLen;
+      const tipY = baseY * 0.3 + wave * 4;
+
+      ctx.beginPath();
+      ctx.moveTo(baseX, baseY);
+      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, baseY * 0.8, tipX, tipY);
+      ctx.quadraticCurveTo(baseX + tongueLen * 0.5, 0, baseX, -baseY * 0.5);
+      ctx.closePath();
+
+      const coreGrad = ctx.createLinearGradient(baseX, 0, tipX, 0);
+      if (isHit) {
+        coreGrad.addColorStop(0, '#ffffff');
+        coreGrad.addColorStop(1, '#ffffff');
+      } else {
+        coreGrad.addColorStop(0, '#ffffff');
+        coreGrad.addColorStop(0.5, '#fef08a');
+        coreGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      }
+      ctx.fillStyle = coreGrad;
+      ctx.fill();
+    }
+
+    // 5. Burning Embers & Sparks flying away in flame direction
+    const emberCount = 6;
+    for (let e = 0; e < emberCount; e++) {
+      const ePhase = (flickerTime * 0.7 + e * 1.6) % 1.0;
+      const eDist = radius * (1.1 + ePhase * 1.5 * lengthScale);
+      const eSpread = (Math.sin(e * 3.7 + flickerTime) * 0.5) * radius;
+      const eSize = Math.max(1.2, radius * 0.08 * (1 - ePhase * 0.6));
+
+      ctx.beginPath();
+      ctx.arc(eDist, eSpread, eSize, 0, Math.PI * 2);
+      ctx.fillStyle = e % 2 === 0 ? 'rgba(254, 240, 138, 0.85)' : 'rgba(249, 115, 22, 0.75)';
+      ctx.fill();
+    }
+
     ctx.restore();
   }
 
@@ -1371,7 +1467,7 @@ function BallThumbnailPreview({ config, theme }) {
 
     const previewRadius = Math.min(20, config.radius * 0.54);
     const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0))));
-    draw3DBall(ctx, 32, 32, previewRadius, config, null, rotation);
+    draw3DBall(ctx, 32, 32, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 });
   }, [config, theme]);
 
   return (
@@ -1447,6 +1543,8 @@ function BallBattleGame() {
     particles: [],
     confetti: [],
     trailPoints: [],
+    fireTrails: [],
+    fireImpacts: [],
     conclusionTimer: 0,
     lastTime: 0,
     running: false,
@@ -1555,6 +1653,8 @@ function BallBattleGame() {
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
     physicsRef.current.trailPoints = [];
+    physicsRef.current.fireTrails = [];
+    physicsRef.current.fireImpacts = [];
     physicsRef.current.conclusionTimer = 0;
     setSimState('planning');
     setWinnerTeam(null);
@@ -1665,6 +1765,7 @@ function BallBattleGame() {
     if (simState === 'playing') {
       physicsRef.current.running = false;
       setSimState('paused');
+      sound.stopAllLoops();
       sound.play('pause');
     } else if (simState === 'paused') {
       physicsRef.current.running = true;
@@ -1675,6 +1776,7 @@ function BallBattleGame() {
   };
 
   const resetToPlanning = () => {
+    sound.stopAllLoops();
     sound.play('buttonClick');
     physicsRef.current.running = false;
     physicsRef.current.balls = [];
@@ -1687,6 +1789,8 @@ function BallBattleGame() {
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
     physicsRef.current.trailPoints = [];
+    physicsRef.current.fireTrails = [];
+    physicsRef.current.fireImpacts = [];
     physicsRef.current.conclusionTimer = 0;
     setSimState('planning');
     setWinnerTeam(null);
@@ -1709,6 +1813,8 @@ function BallBattleGame() {
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
     physicsRef.current.trailPoints = [];
+    physicsRef.current.fireTrails = [];
+    physicsRef.current.fireImpacts = [];
     physicsRef.current.conclusionTimer = 0;
     setSimState('planning');
     setWinnerTeam(null);
@@ -2088,9 +2194,38 @@ function BallBattleGame() {
         if (dtObj.life <= 0) damageTexts.splice(i, 1);
       }
 
+      // Update persistent ground fire trails
+      const fireTrails = physicsRef.current.fireTrails;
+      if (fireTrails) {
+        for (let i = fireTrails.length - 1; i >= 0; i--) {
+          const ft = fireTrails[i];
+          ft.life -= ft.decay;
+          if (ft.life <= 0) fireTrails.splice(i, 1);
+        }
+      }
+
+      // Update fiery impact blast animations
+      const fireImpacts = physicsRef.current.fireImpacts;
+      if (fireImpacts) {
+        for (let i = fireImpacts.length - 1; i >= 0; i--) {
+          const fi = fireImpacts[i];
+          fi.radius += (fi.maxRadius - fi.radius) * 0.24;
+          fi.life -= fi.decay;
+          if (fi.life <= 0) fireImpacts.splice(i, 1);
+        }
+      }
+
       const activeBalls = balls.filter(b => !b.isDead && !b.isDying);
       const livingTeams = new Set(activeBalls.map(b => b.team));
       const hasDyingBalls = balls.some(b => b.isDying);
+
+      // Manage Fire Ball passive ambient burning sound loop
+      const hasLivingFireBall = activeBalls.some(b => b.type === BALL_TYPES.FIRE);
+      if (hasLivingFireBall && simState === 'playing') {
+        sound.startLoop('fireballLoop', 0.65);
+      } else {
+        sound.stopLoop('fireballLoop');
+      }
 
       // Victory Condition: Glide remaining survivor ball to arena center & conclude (only after all dying balls finish exploding!)
       if (!hasDyingBalls && livingTeams.size <= 1 && balls.length > 0 && simState === 'playing') {
@@ -2100,6 +2235,7 @@ function BallBattleGame() {
           const winningTeamId = livingTeams.size === 1 ? Array.from(livingTeams)[0] : -1;
           setWinnerTeam(winningTeamId);
           setSimState('concluded');
+          sound.stopAllLoops();
           sound.play('win', 0.95);
 
           const winningBall = activeBalls[0] || null;
@@ -2327,9 +2463,25 @@ function BallBattleGame() {
           ball.multiAngle = (ball.multiAngle || 0) + safeDt * 3.4;
         }
 
-        // Fire Ball: Blazing flame trail, rotating solar corona, and ember particles
+        // Fire Ball: Literal roaring fire streaming behind motion, dropping persistent burning ground trail
         if (ball.type === BALL_TYPES.FIRE && !ball.isDead && !ball.isDying) {
           ball.fireAngle = (ball.fireAngle || 0) + safeDt * 3.6;
+
+          // Drop persistent ground fire patches along its wake
+          const spd = Math.hypot(ball.vx, ball.vy);
+          if (spd > 0.35 && Math.random() < 0.65) {
+            const backAng = Math.atan2(-ball.vy, -ball.vx);
+            const dropDist = ball.radius * (0.35 + Math.random() * 0.45);
+            physicsRef.current.fireTrails.push({
+              x: ball.x + Math.cos(backAng) * dropDist + (Math.random() - 0.5) * 6,
+              y: ball.y + Math.sin(backAng) * dropDist + (Math.random() - 0.5) * 6,
+              radius: ball.radius * (0.55 + Math.random() * 0.35),
+              life: 1.0,
+              decay: 0.024 + Math.random() * 0.012, // persists ~0.7-0.9s
+              flicker: Math.random() * 20,
+            });
+          }
+
           trailPoints.push({
             x: ball.x,
             y: ball.y,
@@ -2338,12 +2490,13 @@ function BallBattleGame() {
             life: 0.42,
           });
 
-          if (Math.random() < 0.6) {
+          // Hot floating sparks flying upward behind the ball
+          if (Math.random() < 0.7) {
             particles.push({
-              x: ball.x + (Math.random() - 0.5) * ball.radius * 0.85,
-              y: ball.y + (Math.random() - 0.5) * ball.radius * 0.85,
-              vx: (Math.random() - 0.5) * 1.5 - ball.vx * 0.12,
-              vy: -0.8 - Math.random() * 1.8 - ball.vy * 0.12,
+              x: ball.x - (ball.vx || 0) * 1.5 + (Math.random() - 0.5) * ball.radius * 0.7,
+              y: ball.y - (ball.vy || 0) * 1.5 + (Math.random() - 0.5) * ball.radius * 0.7,
+              vx: (Math.random() - 0.5) * 1.5 - ball.vx * 0.15,
+              vy: -1.2 - Math.random() * 1.8 - ball.vy * 0.15,
               life: 1.0,
               decay: 0.045 + Math.random() * 0.035,
               color: Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.3 ? '#fef08a' : '#ea580c'),
@@ -2663,6 +2816,33 @@ function BallBattleGame() {
 
               if (b1.type === BALL_TYPES.FIRE || b2.type === BALL_TYPES.FIRE) {
                 sound.play('fireballHit', 0.95);
+
+                // Fiery explosive impact shockwave animation
+                physicsRef.current.fireImpacts.push({
+                  x: midX,
+                  y: midY,
+                  radius: 8,
+                  maxRadius: Math.max(b1.radius, b2.radius) * 2.6,
+                  life: 1.0,
+                  decay: 0.04, // lasts ~350ms
+                  rot: Math.random() * Math.PI * 2,
+                });
+
+                // Shower of 28 high-velocity explosive molten sparks
+                for (let p = 0; p < 28; p++) {
+                  const pAng = Math.random() * Math.PI * 2;
+                  const pSpd = 2.0 + Math.random() * 4.5;
+                  particles.push({
+                    x: midX,
+                    y: midY,
+                    vx: Math.cos(pAng) * pSpd,
+                    vy: Math.sin(pAng) * pSpd - 0.8,
+                    life: 1.0,
+                    decay: 0.035 + Math.random() * 0.03,
+                    color: p % 3 === 0 ? '#ffffff' : (p % 3 === 1 ? '#fef08a' : '#f97316'),
+                    size: Math.random() * 3.5 + 2.0,
+                  });
+                }
               } else if (b1.type === BALL_TYPES.ACCELERATOR || b2.type === BALL_TYPES.ACCELERATOR) {
                 sound.play('acceleratorHit', 0.9);
               } else if (b1.type === BALL_TYPES.GROW || b2.type === BALL_TYPES.GROW) {
@@ -3227,6 +3407,53 @@ function BallBattleGame() {
         });
       }
 
+      // Render ground fire trails left by Fire Ball
+      if (simState !== 'planning' && physicsRef.current.fireTrails) {
+        physicsRef.current.fireTrails.forEach(ft => {
+          ctx.save();
+          const alpha = Math.max(0, ft.life);
+          ctx.globalAlpha = Math.min(1.0, alpha);
+
+          // Scorched glowing ember base on the floor
+          const groundGlow = ctx.createRadialGradient(ft.x, ft.y, 0, ft.x, ft.y, ft.radius);
+          groundGlow.addColorStop(0, 'rgba(254, 240, 138, 0.75)');
+          groundGlow.addColorStop(0.35, 'rgba(249, 115, 22, 0.6)');
+          groundGlow.addColorStop(0.7, 'rgba(220, 38, 38, 0.35)');
+          groundGlow.addColorStop(1, 'rgba(124, 45, 18, 0)');
+          ctx.fillStyle = groundGlow;
+          ctx.beginPath();
+          ctx.arc(ft.x, ft.y, ft.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Dynamic flame tongues licking UPWARD from the ground
+          const tongues = 4;
+          const time = (performance.now() * 0.006) + ft.flicker;
+          for (let t = 0; t < tongues; t++) {
+            const tOffset = ((t / (tongues - 1)) - 0.5) * (ft.radius * 1.1);
+            const bx = ft.x + tOffset;
+            const by = ft.y + (Math.sin(t + time) * 3);
+            const tongueH = ft.radius * (0.9 + 0.6 * Math.sin(time * 3 + t * 2)) * alpha;
+            const tipX = bx + Math.sin(time * 2.5 + t) * 4;
+            const tipY = by - tongueH;
+
+            ctx.beginPath();
+            ctx.moveTo(bx - 3, by);
+            ctx.quadraticCurveTo(bx - 2, by - tongueH * 0.5, tipX, tipY);
+            ctx.quadraticCurveTo(bx + 2, by - tongueH * 0.5, bx + 3, by);
+            ctx.closePath();
+
+            const tGrad = ctx.createLinearGradient(bx, by, tipX, tipY);
+            tGrad.addColorStop(0, '#f97316');
+            tGrad.addColorStop(0.6, '#fef08a');
+            tGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = tGrad;
+            ctx.fill();
+          }
+
+          ctx.restore();
+        });
+      }
+
       // Render broken glass shards left on the arena ground
       if (simState !== 'planning' && physicsRef.current.brokenShards) {
         physicsRef.current.brokenShards.forEach(s => {
@@ -3439,6 +3666,10 @@ function BallBattleGame() {
         const hasTeamMode = (simState === 'planning' ? placedBalls : physicsRef.current.balls)
           .some((b, _, arr) => arr.filter(o => o.team === b.team).length > 1);
 
+        const motionVec = simState === 'planning'
+          ? (ball.angle !== undefined ? { vx: Math.cos(ball.angle) * 1.5, vy: Math.sin(ball.angle) * 1.5 } : { vx: 0, vy: 0 })
+          : { vx: ball.vx || 0, vy: ball.vy || 0 };
+
         draw3DBall(
           ctx,
           renderX,
@@ -3450,7 +3681,8 @@ function BallBattleGame() {
           isFlash,
           ball.shield || 0,
           theme,
-          ball.missingNotches || []
+          ball.missingNotches || [],
+          motionVec
         );
 
         if (simState === 'planning') {
@@ -3600,6 +3832,55 @@ function BallBattleGame() {
         ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.6);
         ctx.restore();
       });
+
+      // Render fiery impact blast animations
+      if (simState !== 'planning' && physicsRef.current.fireImpacts) {
+        physicsRef.current.fireImpacts.forEach(fi => {
+          ctx.save();
+          const alpha = Math.max(0, fi.life);
+          ctx.globalAlpha = Math.min(1.0, alpha);
+
+          // 1. Searing blast flash at epicenter
+          const flashGrad = ctx.createRadialGradient(fi.x, fi.y, 0, fi.x, fi.y, fi.radius * 0.65);
+          flashGrad.addColorStop(0, '#ffffff');
+          flashGrad.addColorStop(0.35, 'rgba(254, 240, 138, 0.9)');
+          flashGrad.addColorStop(0.7, 'rgba(249, 115, 22, 0.55)');
+          flashGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+          ctx.fillStyle = flashGrad;
+          ctx.beginPath();
+          ctx.arc(fi.x, fi.y, fi.radius * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 2. Expanding fiery shockwave ring
+          ctx.strokeStyle = `rgba(249, 115, 22, ${alpha * 0.85})`;
+          ctx.lineWidth = Math.max(2, 6 * alpha);
+          ctx.beginPath();
+          ctx.arc(fi.x, fi.y, fi.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 3. Inner golden heat ring
+          ctx.strokeStyle = `rgba(254, 240, 138, ${alpha})`;
+          ctx.lineWidth = Math.max(1, 2.5 * alpha);
+          ctx.beginPath();
+          ctx.arc(fi.x, fi.y, fi.radius * 0.85, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 4. Outward radiating flame blast spikes
+          const rays = 10;
+          for (let r = 0; r < rays; r++) {
+            const rAng = fi.rot + (r * Math.PI * 2) / rays;
+            const rLen = fi.radius * (1.1 + 0.3 * Math.sin(r * 2 + fi.rot));
+            ctx.beginPath();
+            ctx.moveTo(fi.x + Math.cos(rAng) * (fi.radius * 0.6), fi.y + Math.sin(rAng) * (fi.radius * 0.6));
+            ctx.lineTo(fi.x + Math.cos(rAng) * rLen, fi.y + Math.sin(rAng) * rLen);
+            ctx.strokeStyle = r % 2 === 0 ? `rgba(254, 240, 138, ${alpha})` : `rgba(249, 115, 22, ${alpha})`;
+            ctx.lineWidth = Math.max(1.5, 3.5 * alpha);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        });
+      }
 
       if (simState !== 'planning') {
         physicsRef.current.damageTexts.forEach(dt => {
