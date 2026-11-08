@@ -852,6 +852,15 @@ html, body, #root {
   100% { border-color: #ef4444; box-shadow: 0 0 9px rgba(239, 68, 68, 0.8); }
 }
 
+.hud-effect-badge.heal-active {
+  animation: healPulse 1.3s infinite alternate;
+}
+
+@keyframes healPulse {
+  0% { border-color: #10b981; box-shadow: 0 0 3px rgba(16, 185, 129, 0.4); }
+  100% { border-color: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.7); }
+}
+
 .sim-team-tallies {
   display: flex;
   align-items: center;

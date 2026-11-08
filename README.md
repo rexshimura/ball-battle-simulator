@@ -58,7 +58,7 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 *6 rarity tiers available — with more ball classes actively on the way!*
 
 - **⚪ Common**: `Normal Ball` `Fast Ball` `Big Ball`
-- **🟢 Uncommon**: `Stone Ball` `Knife Ball` `Sword Ball` `Spike Ball`
+- **🟢 Uncommon**: `Stone Ball` `Heal Ball` `Knife Ball` `Sword Ball` `Spike Ball`
 - **🔵 Rare**: `Steel Ball` `Glass Ball` `Hammer Ball` `Grow Ball`
 - **🟣 Unique**: `Accelerator Ball` `Gun Ball` `Multi Ball`
 - **🌸 Epic**: `Shard Ball` `Thorn Ball`
@@ -68,7 +68,7 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 
 ## ⚡ Status Effects & Combat Mechanics
 
-`🩸 Bleed` &nbsp; `🛡️ Shield` &nbsp; `🏋️ Heavy` &nbsp; `🚀 Accelerate` &nbsp; `🎯 Shard Target` &nbsp; `🌿 Thorns` &nbsp; `🧬 Split` &nbsp; `🔥 Burn`
+`🩸 Bleed` &nbsp; `🛡️ Shield` &nbsp; `🏋️ Heavy` &nbsp; `🚀 Accelerate` &nbsp; `🎯 Shard Target` &nbsp; `🌿 Thorns` &nbsp; `🧬 Split` &nbsp; `🔥 Burn` &nbsp; `💚 Heal`
 
 > 💡 *Jump into the simulator and open the in-game **Effects & Weapons Codex** to explore full stats, scaling mechanics, and hidden unit passives!*
 

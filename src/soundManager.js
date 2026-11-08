@@ -36,10 +36,12 @@ const SFX_FILES = {
   fireballHitWall: '/sfx/sfx-ball-fireball-hitwall.mp3',
   fireballLoop: '/sfx/sfx-ball-fireball-passive-sound-loop.mp3',
   gameStart: '/sfx/sfx-game-start.mp3',
+  heal: '/sfx/sfx-ball-heal.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
 const SOUND_COOLDOWNS = {
+  heal: 100,
   gameStart: 100,
   wallBounce: 45,
   bodyHit: 50,

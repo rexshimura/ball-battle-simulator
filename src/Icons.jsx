@@ -246,3 +246,12 @@ export function BurnIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function HealIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M12 5v14M5 12h14" />
+      <circle cx="12" cy="12" r="9" strokeWidth="2" />
+    </svg>
+  );
+}

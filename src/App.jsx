@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -145,6 +145,12 @@ const EFFECT_TOOLTIPS = {
     category: 'STATUS TAG',
     icon: <BurnIcon size={14} color="#f97316" />,
     description: 'Scorching fire damage dealing 6 consecutive ticks (-4, -3, -2, -1, -1, -1) over an extended duration. Unlike puncture bleed, Burn is true fire damage that bypasses armor bleed resistances.',
+  },
+  HEAL: {
+    title: 'SELF-HEAL',
+    category: 'ABILITY TAG',
+    icon: <HealIcon size={14} color="#10b981" />,
+    description: 'Periodically pulses restorative green energy every 5 seconds, regenerating +30 HP to itself in combat.',
   },
 };
 
@@ -1073,6 +1079,33 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
+    // Heal Ball: Centered medical healing cross & soft pulsating restorative aura
+    if (config.id === BALL_TYPES.HEAL) {
+      ctx.save();
+      ctx.clip();
+      ctx.translate(x, y);
+
+      // Pulsing healing aura ring
+      const pulse = Math.sin(rotationAngle * 3) * 0.12;
+      ctx.strokeStyle = 'rgba(167, 243, 208, 0.55)';
+      ctx.lineWidth = Math.max(1.2, radius * 0.06);
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * (0.64 + pulse), 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Bold centered medical cross
+      const crossW = radius * 0.52;
+      const barThick = radius * 0.18;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#6ee7b7';
+      ctx.shadowBlur = 6;
+      ctx.fillRect(-barThick / 2, -crossW / 2, barThick, crossW);
+      ctx.fillRect(-crossW / 2, -barThick / 2, crossW, barThick);
+
+      ctx.restore();
+    }
+
     // Glass Ball: Crystalline refraction, internal facets & missing broken notches
     if (config.id === BALL_TYPES.GLASS) {
       ctx.save();
@@ -1711,6 +1744,8 @@ function BallBattleGame() {
         growCooldown: 0,
         growDelayTimer: 0,
         hasTriggeredGrowFx: false,
+        healTimer: 5000,
+        healFlashTimer: 0,
         missingNotches: [],
         fireHistory: b.type === BALL_TYPES.FIRE ? Array.from({ length: 16 }, (_, idx) => ({
           x: b.x - Math.cos(b.angle) * (idx * (b.radius * 0.22)),
@@ -2012,6 +2047,21 @@ function BallBattleGame() {
         isBurn,
         life: 1.0,
         decay: 0.02,
+        vy: -1.3,
+      });
+    };
+
+    const spawnHealText = (x, y, amount) => {
+      const offsetX = (Math.random() - 0.5) * 12;
+      physicsRef.current.damageTexts.push({
+        x: x + offsetX,
+        y: y - 16,
+        text: `+${Math.round(amount)}`,
+        fontSize: 18,
+        opacity: 1.0,
+        isHeal: true,
+        life: 1.0,
+        decay: 0.018,
         vy: -1.3,
       });
     };
@@ -2449,6 +2499,29 @@ function BallBattleGame() {
           ball.multiAngle = (ball.multiAngle || 0) + safeDt * 3.4;
         }
 
+        // Heal Ball: Self-heals +30 HP every 5 seconds
+        if (ball.type === BALL_TYPES.HEAL && !ball.isDead && !ball.isDying) {
+          if (ball.healTimer === undefined) ball.healTimer = 5000;
+          ball.healTimer -= safeDt * 1000;
+          if (ball.healTimer <= 0) {
+            ball.healTimer = 5000;
+            if (ball.hp < ball.maxHp) {
+              const healAmount = ball.config?.healAmount || 30;
+              const prevHp = ball.hp;
+              ball.hp = Math.min(ball.maxHp, ball.hp + healAmount);
+              const actualHealed = ball.hp - prevHp;
+              if (actualHealed > 0) {
+                ball.healFlashTimer = 350;
+                spawnHealText(ball.x, ball.y, actualHealed);
+                sound.play('heal', 0.95);
+                spawnParticles(ball.x, ball.y, '#10b981', 12, 1.8);
+                spawnParticles(ball.x, ball.y, '#6ee7b7', 8, 1.5);
+                spawnParticles(ball.x, ball.y, '#ffffff', 5, 1.2);
+              }
+            }
+          }
+        }
+
         // Fire Ball: Literal roaring fire streaming behind motion, dropping persistent burning ground trail
         if (ball.type === BALL_TYPES.FIRE && !ball.isDead && !ball.isDying) {
           ball.fireAngle = (ball.fireAngle || 0) + safeDt * 3.6;
@@ -2555,6 +2628,7 @@ function BallBattleGame() {
         }
 
         if (ball.hitFlashTimer > 0) ball.hitFlashTimer = Math.max(0, ball.hitFlashTimer - safeDt * 1000);
+        if (ball.healFlashTimer > 0) ball.healFlashTimer = Math.max(0, ball.healFlashTimer - safeDt * 1000);
         if (ball.hitShakeTimer > 0) ball.hitShakeTimer = Math.max(0, ball.hitShakeTimer - safeDt * 1000);
         if (ball.invulnerableTimer > 0) ball.invulnerableTimer = Math.max(0, ball.invulnerableTimer - safeDt * 1000);
 
@@ -3666,6 +3740,18 @@ function BallBattleGame() {
           renderY += (Math.random() - 0.5) * 4;
         }
 
+        // Heal pulse ring expanding outwards
+        if (ball.healFlashTimer > 0) {
+          const healProg = 1 - (ball.healFlashTimer / 350);
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(renderX, renderY, renderRadius + healProg * 24, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(52, 211, 153, ${Math.max(0, 1 - healProg) * 0.85})`;
+          ctx.lineWidth = Math.max(1.5, 3.5 * (1 - healProg));
+          ctx.stroke();
+          ctx.restore();
+        }
+
         const currentRot = simState === 'planning'
           ? ball.angle
           : (ball.type === BALL_TYPES.FIRE
@@ -3920,13 +4006,13 @@ function BallBattleGame() {
           ctx.font = `800 ${dt.fontSize}px "JetBrains Mono", monospace`;
           ctx.textAlign = 'center';
           if (isLight) {
-            ctx.shadowColor = dt.isBurn ? 'rgba(234, 88, 12, 0.45)' : 'rgba(0,0,0,0.18)';
-            ctx.shadowBlur = dt.isBurn ? 6 : 4;
-            ctx.fillStyle = dt.isShieldAbsorb ? '#0284c7' : (dt.isBurn ? '#c2410c' : (dt.isCritical ? '#b91c1c' : '#dc2626'));
+            ctx.shadowColor = dt.isHeal ? 'rgba(16, 185, 129, 0.45)' : (dt.isBurn ? 'rgba(234, 88, 12, 0.45)' : 'rgba(0,0,0,0.18)');
+            ctx.shadowBlur = (dt.isHeal || dt.isBurn) ? 6 : 4;
+            ctx.fillStyle = dt.isHeal ? '#059669' : (dt.isShieldAbsorb ? '#0284c7' : (dt.isBurn ? '#c2410c' : (dt.isCritical ? '#b91c1c' : '#dc2626')));
           } else {
-            ctx.shadowColor = dt.isBurn ? '#ea580c' : '#000000';
-            ctx.shadowBlur = dt.isBurn ? 8 : 6;
-            ctx.fillStyle = dt.isShieldAbsorb ? '#38bdf8' : (dt.isBurn ? '#f97316' : (dt.isCritical ? '#f87171' : '#ef4444'));
+            ctx.shadowColor = dt.isHeal ? '#10b981' : (dt.isBurn ? '#ea580c' : '#000000');
+            ctx.shadowBlur = (dt.isHeal || dt.isBurn) ? 8 : 6;
+            ctx.fillStyle = dt.isHeal ? '#34d399' : (dt.isShieldAbsorb ? '#38bdf8' : (dt.isBurn ? '#f97316' : (dt.isCritical ? '#f87171' : '#ef4444')));
           }
           ctx.fillText(dt.text, dt.x, dt.y);
           ctx.restore();
@@ -4984,6 +5070,15 @@ function BallBattleGame() {
                                   <FlameIcon size={13} color="#f97316" /> FLAMING
                                 </span>
                               )}
+                              {b.type === BALL_TYPES.HEAL && (
+                                <span
+                                  className="hud-effect-badge heal-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'HEAL')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <HealIcon size={13} color="#10b981" /> HEAL
+                                </span>
+                              )}
                             </div>
 
                             {/* In 1v1 mode, render stats below the statuses */}
@@ -5404,6 +5499,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <FlameIcon size={13} color="#f97316" /> FLAMING
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.HEAL && (
+                                <span
+                                  className="hud-effect-badge heal-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'HEAL')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <HealIcon size={13} color="#10b981" /> HEAL
                                 </span>
                               )}
                             </div>
