@@ -162,7 +162,7 @@ const EFFECT_TOOLTIPS = {
     title: 'LUCKY ROLL',
     category: 'WEAPON TAG',
     icon: <DiceIcon size={14} color="#f59e0b" />,
-    description: 'A high-stakes casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value based on audio pitch: High (50-80 DMG), Mid (20-49 DMG), or Low (5-19 DMG). Every hit thereafter deals its rolled value and rolls the next damage number.',
+    description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or legendary God 99 DMG (1%). Every hit thereafter deals its rolled value and rolls the next damage number.',
   },
 };
 
@@ -1301,7 +1301,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
 
       const diceValue = extraData?.value ?? 1;
       const isRolling = extraData?.isRolling ?? false;
-      const tier = extraData?.tier ?? (diceValue >= 50 ? 'high' : (diceValue >= 20 ? 'mid' : 'low'));
+      const tier = extraData?.tier ?? (diceValue === 99 ? 'god' : (diceValue >= 30 ? 'high' : (diceValue >= 15 ? 'mid' : 'low')));
       const popScale = extraData?.popScale ?? 1.0;
 
       // Color palette based on current tier:
@@ -1309,7 +1309,12 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       let tierAccent = '#38bdf8';
       let tierGlow = 'rgba(56, 189, 248, 0.4)';
       let tierBg = 'rgba(2, 132, 199, 0.12)';
-      if (tier === 'high') {
+      if (tier === 'god') {
+        tierColor = '#dc2626';        // God (radiant ruby/crimson)
+        tierAccent = '#fbbf24';
+        tierGlow = 'rgba(239, 68, 68, 0.8)';
+        tierBg = 'rgba(239, 68, 68, 0.25)';
+      } else if (tier === 'high') {
         tierColor = '#d97706';        // High (gold/amber)
         tierAccent = '#fbbf24';
         tierGlow = 'rgba(245, 158, 11, 0.55)';
@@ -1432,7 +1437,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       // Small subtle "DMG" label above the number
       ctx.font = `800 ${Math.max(6, Math.round(radius * 0.16))}px "JetBrains Mono", monospace`;
       ctx.fillStyle = isRolling ? tierAccent : (isLight ? '#64748b' : '#94a3b8');
-      ctx.fillText('DMG', 0, -plaqueR * 0.62);
+      ctx.fillText(tier === 'god' ? 'GOD' : 'DMG', 0, -plaqueR * 0.62);
 
       ctx.restore(); // scale restore
 
@@ -1851,15 +1856,16 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     ctx.stroke();
   }
 
-  // Golden shimmer ring for Dice Ball when in High tier (50-80 DMG)
-  if (config.id === BALL_TYPES.DICE && extraData?.tier === 'high' && !isHit) {
+  // Radiant shimmer ring for Dice Ball when in High or God tier
+  if (config.id === BALL_TYPES.DICE && (extraData?.tier === 'high' || extraData?.tier === 'god') && !isHit) {
     ctx.save();
     ctx.beginPath();
     ctx.arc(x, y, radius + 2.5, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
-    ctx.lineWidth = 2.0;
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 8;
+    const isGod = extraData?.tier === 'god';
+    ctx.strokeStyle = isGod ? 'rgba(239, 68, 68, 0.85)' : 'rgba(245, 158, 11, 0.55)';
+    ctx.lineWidth = isGod ? 2.8 : 2.0;
+    ctx.shadowColor = isGod ? '#ef4444' : '#f59e0b';
+    ctx.shadowBlur = isGod ? 14 : 8;
     ctx.stroke();
     ctx.restore();
   }
@@ -2972,12 +2978,14 @@ function BallBattleGame() {
             ball.diceRollTimer = Math.max(0, ball.diceRollTimer - safeDt * 1000);
             // Snappy rapid number shuffle during roll
             if (Math.random() < 0.65 || ball.displayedDamage === undefined) {
-              if (ball.diceTier === 'high') {
-                ball.displayedDamage = Math.floor(Math.random() * (80 - 50 + 1)) + 50;
+              if (ball.diceTier === 'god') {
+                ball.displayedDamage = 99;
+              } else if (ball.diceTier === 'high') {
+                ball.displayedDamage = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
               } else if (ball.diceTier === 'mid') {
-                ball.displayedDamage = Math.floor(Math.random() * (49 - 20 + 1)) + 20;
+                ball.displayedDamage = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
               } else {
-                ball.displayedDamage = Math.floor(Math.random() * (19 - 5 + 1)) + 5;
+                ball.displayedDamage = Math.floor(Math.random() * (12 - 5 + 1)) + 5;
               }
             }
 
@@ -2986,8 +2994,10 @@ function BallBattleGame() {
               ball.damage = ball.diceRollTarget;
               ball.displayedDamage = ball.diceRollTarget;
               ball.dicePopScale = 1.45; // punchy bounce on landing
-              const sparkCol = ball.diceTier === 'high' ? '#fbbf24' : (ball.diceTier === 'mid' ? '#38bdf8' : '#cbd5e1');
-              spawnParticles(ball.x, ball.y, sparkCol, 14, 2.2);
+              const isGod = ball.diceTier === 'god';
+              const sparkCol = isGod ? '#ef4444' : (ball.diceTier === 'high' ? '#fbbf24' : (ball.diceTier === 'mid' ? '#38bdf8' : '#cbd5e1'));
+              spawnParticles(ball.x, ball.y, sparkCol, isGod ? 24 : 14, isGod ? 3.0 : 2.2);
+              if (isGod) spawnParticles(ball.x, ball.y, '#fbbf24', 12, 2.5);
             }
           }
 
@@ -3607,17 +3617,25 @@ function BallBattleGame() {
               const rollDiceBall = (diceBall) => {
                 const roll = Math.random();
                 let tier, targetDmg, sfx;
-                if (roll < 0.25) {
-                  tier = 'high';
-                  targetDmg = Math.floor(Math.random() * (80 - 50 + 1)) + 50; // 50 to 80
+                if (roll < 0.01) {
+                  // 1% God Tier (99 DMG)
+                  tier = 'god';
+                  targetDmg = 99;
                   sfx = 'diceRollHigh';
-                } else if (roll < 0.75) {
+                } else if (roll < 0.06) {
+                  // 5% High Tier (30 - 50 DMG)
+                  tier = 'high';
+                  targetDmg = Math.floor(Math.random() * (50 - 30 + 1)) + 30;
+                  sfx = 'diceRollHigh';
+                } else if (roll < 0.26) {
+                  // 20% Mid Tier (15 - 25 DMG)
                   tier = 'mid';
-                  targetDmg = Math.floor(Math.random() * (49 - 20 + 1)) + 20; // 20 to 49
+                  targetDmg = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
                   sfx = 'diceRollMid';
                 } else {
+                  // 74% Low Tier (5 - 12 DMG)
                   tier = 'low';
-                  targetDmg = Math.floor(Math.random() * (19 - 5 + 1)) + 5; // 5 to 19
+                  targetDmg = Math.floor(Math.random() * (12 - 5 + 1)) + 5;
                   sfx = 'diceRollLow';
                 }
 
@@ -3626,8 +3644,10 @@ function BallBattleGame() {
                 diceBall.diceRollTarget = targetDmg;
                 diceBall.damage = targetDmg;
                 diceBall.diceRollTimer = 260; // snappy roll duration so number is locked in before next hit
-                diceBall.dicePopScale = 1.35;
-                spawnParticles(diceBall.x, diceBall.y, tier === 'high' ? '#f59e0b' : (tier === 'mid' ? '#06b6d4' : '#94a3b8'), 10, 2.0);
+                diceBall.dicePopScale = tier === 'god' ? 1.6 : 1.35;
+                const rollParticleColor = tier === 'god' ? '#ef4444' : (tier === 'high' ? '#f59e0b' : (tier === 'mid' ? '#06b6d4' : '#94a3b8'));
+                spawnParticles(diceBall.x, diceBall.y, rollParticleColor, tier === 'god' ? 20 : 10, tier === 'god' ? 3.0 : 2.0);
+                if (tier === 'god') spawnParticles(diceBall.x, diceBall.y, '#fbbf24', 10, 2.5);
               };
 
               if (b1.type === BALL_TYPES.DICE && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
@@ -4714,7 +4734,7 @@ function BallBattleGame() {
             ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
             ctx.fillRect(barX, diceBarY, barWidth, diceBarH);
 
-            const tierCol = ball.diceTier === 'high' ? '#f59e0b' : (ball.diceTier === 'mid' ? '#06b6d4' : '#94a3b8');
+            const tierCol = ball.diceTier === 'god' ? '#ef4444' : (ball.diceTier === 'high' ? '#f59e0b' : (ball.diceTier === 'mid' ? '#06b6d4' : '#94a3b8'));
             ctx.fillStyle = tierCol;
             ctx.fillRect(barX, diceBarY, barWidth * prog, diceBarH);
 
@@ -5704,7 +5724,7 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.DICE && b.diceRollTimer > 0 && (
                               <div className="hud-shield-charge-wrapper" title="Dice Ball: Rolling new damage!">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8') }}>
+                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')) }}>
                                     {b.diceTier ? `${b.diceTier.toUpperCase()} ROLL` : 'ROLLING...'}
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
@@ -5716,7 +5736,7 @@ function BallBattleGame() {
                                     style={{
                                       width: `${Math.min(100, Math.max(0, (1 - b.diceRollTimer / 750) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8'),
+                                      backgroundColor: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')),
                                       boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)',
                                     }}
                                   />
@@ -6229,7 +6249,7 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.DICE && b.diceRollTimer > 0 && (
                               <div className="hud-shield-charge-wrapper" title="Dice Ball: Rolling new damage!">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8') }}>
+                                  <span className="hud-charge-txt" style={{ color: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')) }}>
                                     {b.diceTier ? `${b.diceTier.toUpperCase()} ROLL` : 'ROLLING...'}
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
@@ -6241,7 +6261,7 @@ function BallBattleGame() {
                                     style={{
                                       width: `${Math.min(100, Math.max(0, (1 - b.diceRollTimer / 750) * 100))}%`,
                                       height: '100%',
-                                      backgroundColor: b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8'),
+                                      backgroundColor: b.diceTier === 'god' ? '#ef4444' : (b.diceTier === 'high' ? '#f59e0b' : (b.diceTier === 'mid' ? '#06b6d4' : '#94a3b8')),
                                       boxShadow: '0 0 6px rgba(245, 158, 11, 0.6)',
                                     }}
                                   />
