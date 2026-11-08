@@ -162,7 +162,7 @@ const EFFECT_TOOLTIPS = {
     title: 'LUCKY ROLL',
     category: 'WEAPON TAG',
     icon: <DiceIcon size={14} color="#f59e0b" />,
-    description: 'A high-stakes casino die dealing 15 damage initially. On contact with an enemy, it plays a roll sound and rolls a random damage value based on audio pitch: High (50-80 DMG), Mid (20-49 DMG), or Low (5-19 DMG), visibly animating and displaying the live value on its body.',
+    description: 'A high-stakes casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value based on audio pitch: High (50-80 DMG), Mid (20-49 DMG), or Low (5-19 DMG). Every hit thereafter deals its rolled value and rolls the next damage number.',
   },
 };
 
@@ -1299,7 +1299,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.save();
       ctx.clip(); // stay strictly inside spherical bounds
 
-      const diceValue = extraData?.value ?? 15;
+      const diceValue = extraData?.value ?? 1;
       const isRolling = extraData?.isRolling ?? false;
       const tier = extraData?.tier ?? (diceValue >= 50 ? 'high' : (diceValue >= 20 ? 'mid' : 'low'));
       const popScale = extraData?.popScale ?? 1.0;
@@ -1907,7 +1907,7 @@ function BallThumbnailPreview({ config, theme }) {
     const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
     const previewY = isFire ? 44 : 32;
     const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0)))));
-    const diceState = config.id === BALL_TYPES.DICE ? { value: 15, isRolling: false, tier: 'mid', popScale: 1.0 } : null;
+    const diceState = config.id === BALL_TYPES.DICE ? { value: 1, isRolling: false, tier: 'low', popScale: 1.0 } : null;
     draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 }, diceState);
   }, [config, theme]);
 
@@ -2182,11 +2182,12 @@ function BallBattleGame() {
         hasTriggeredGrowFx: false,
         healTimer: 6000,
         healFlashTimer: 0,
-        diceDamage: 15,
-        displayedDamage: 15,
+        diceHits: 0,
+        diceDamage: 1,
+        displayedDamage: 1,
         diceRollTimer: 0,
-        diceRollTarget: 15,
-        diceTier: 'mid',
+        diceRollTarget: 1,
+        diceTier: 'low',
         dicePopScale: 1.0,
         missingNotches: [],
         fireHistory: b.type === BALL_TYPES.FIRE ? Array.from({ length: 16 }, (_, idx) => ({
@@ -3574,7 +3575,6 @@ function BallBattleGame() {
 
               // Dice Ball: Roll random damage on enemy collision based on roll sound pitch
               const rollDiceBall = (diceBall) => {
-                sound.play('diceHit', 0.85);
 
                 const roll = Math.random();
                 let tier, targetDmg, sfx;
@@ -3601,21 +3601,44 @@ function BallBattleGame() {
               };
 
               if (b1.type === BALL_TYPES.DICE && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
-                if (b1.diceRollTimer > 0) {
-                  b1.damage = b1.diceRollTarget;
-                  b1.displayedDamage = b1.diceRollTarget;
-                  dmgB1ToB2 = b1.damage;
+                b1.diceHits = (b1.diceHits || 0) + 1;
+                sound.play('diceHit', 0.85);
+
+                if (b1.diceHits === 1) {
+                  // Hit 1: deals default 1 damage, does not roll yet
+                  b1.dicePopScale = 1.25;
+                  spawnParticles(b1.x, b1.y, '#94a3b8', 6, 1.5);
+                } else if (b1.diceHits === 2) {
+                  // Hit 2: deals default 1 damage, initiates first lucky roll for subsequent hits!
+                  rollDiceBall(b1);
+                } else {
+                  // Hit 3+: deals previously rolled damage, then rolls next lucky number!
+                  if (b1.diceRollTimer > 0) {
+                    b1.damage = b1.diceRollTarget;
+                    b1.displayedDamage = b1.diceRollTarget;
+                    dmgB1ToB2 = b1.damage;
+                  }
+                  rollDiceBall(b1);
                 }
-                rollDiceBall(b1);
               }
 
               if (b2.type === BALL_TYPES.DICE && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
-                if (b2.diceRollTimer > 0) {
-                  b2.damage = b2.diceRollTarget;
-                  b2.displayedDamage = b2.diceRollTarget;
-                  dmgB2ToB1 = b2.damage;
+                b2.diceHits = (b2.diceHits || 0) + 1;
+                sound.play('diceHit', 0.85);
+
+                if (b2.diceHits === 1) {
+                  b2.dicePopScale = 1.25;
+                  spawnParticles(b2.x, b2.y, '#94a3b8', 6, 1.5);
+                } else if (b2.diceHits === 2) {
+                  rollDiceBall(b2);
+                } else {
+                  if (b2.diceRollTimer > 0) {
+                    b2.damage = b2.diceRollTarget;
+                    b2.displayedDamage = b2.diceRollTarget;
+                    dmgB2ToB1 = b2.damage;
+                  }
+                  rollDiceBall(b2);
                 }
-                rollDiceBall(b2);
               }
 
               applyDamage(b2, dmgB1ToB2, b1);
@@ -4471,7 +4494,7 @@ function BallBattleGame() {
           };
 
         const diceState = ball.type === BALL_TYPES.DICE ? {
-          value: ball.displayedDamage ?? ball.damage ?? 15,
+          value: ball.displayedDamage ?? ball.damage ?? 1,
           isRolling: (ball.diceRollTimer || 0) > 0,
           tier: ball.diceTier || 'mid',
           popScale: ball.dicePopScale || 1.0,

@@ -405,9 +405,9 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.DICE,
     name: 'Dice Ball',
     rarity: RARITIES.LEGENDARY,
-    description: 'A high-stakes casino die with dynamic body damage (starts at 15). Striking an enemy rolls a random damage value based on audio pitch: High (50-80), Mid (20-49), or Low (5-19), updating the live value displayed on its body.',
+    description: 'A high-stakes casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it unlocks and rolls a random damage value based on audio pitch: High (50-80), Mid (20-49), or Low (5-19). Every hit thereafter deals its rolled value and rolls the next damage number.',
     baseHp: 100,
-    damage: 15,
+    damage: 1,
     speed: 2.2,
     radius: 38,
     mass: 1.1,
@@ -415,7 +415,7 @@ export const BALL_CONFIGS = {
     highlightColor: '#ffffff', // High-gloss reflection
     shadowColor: '#94a3b8',    // Slate beveled shadow
     pipColor: '#0f172a',       // Obsidian dice pips
-    special: 'Lucky Roll (5 - 80 DMG)',
+    special: 'Lucky Roll (Starts at 1, rolls after 2 hits)',
   },
 };
 
