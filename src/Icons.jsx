@@ -228,3 +228,21 @@ export function SplitIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function FlameIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M8.5 14.5A3.5 3.5 0 0 0 12 18a3.5 3.5 0 0 0 3.5-3.5c0-2-1.5-3-2-4.5-.5 1.5-1.5 2-1.5 2s-.5-1-1-2c-.5 1-2.5 2.5-2.5 4.5z" fill={color} fillOpacity="0.35" />
+      <path d="M12 2c1 3 4 5.5 4 10a4 4 0 0 1-8 0c0-2.5 1.5-5 2.5-7 .5 2 1.5 2.5 1.5 2.5s0-3.5 0-5.5z" />
+    </svg>
+  );
+}
+
+export function BurnIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M12 2.5c2 3.5 6 6.5 6 11.5a6 6 0 1 1-12 0c0-3.2 1.8-6.2 3.2-8.5.8 2.2 2 3 2 3s.3-3.8.8-6z" fill={color} fillOpacity="0.25" />
+      <path d="M12 11.5a2.5 2.5 0 0 0-2.5 2.5c0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5c0-1.2-.9-2.1-2.5-2.5z" fill={color} />
+    </svg>
+  );
+}

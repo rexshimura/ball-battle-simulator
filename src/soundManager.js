@@ -31,6 +31,9 @@ const SFX_FILES = {
   thornSet: '/sfx/sfx-ball-thorn-set.mp3',
   thornHit: '/sfx/sfx-ball-thorn-hit.mp3',
   split: '/sfx/sfx-ball-split.mp3',
+  fireballBurn: '/sfx/sfx-ball-fireball-burn.mp3',
+  fireballHit: '/sfx/sfx-ball-fireball-hit.mp3',
+  fireballHitWall: '/sfx/sfx-ball-fireball-hitwall.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
@@ -45,6 +48,9 @@ const SOUND_COOLDOWNS = {
   thornSet: 70,
   thornHit: 60,
   split: 70,
+  fireballBurn: 70,
+  fireballHit: 60,
+  fireballHitWall: 55,
   buttonHover: 65,
   buttonClick: 50,
   bleed: 80,

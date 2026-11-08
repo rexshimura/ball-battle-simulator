@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -133,6 +133,18 @@ const EFFECT_TOOLTIPS = {
     category: 'SPECIAL TRAIT',
     icon: <SplitIcon size={14} color="#d946ef" />,
     description: 'Starts with half HP (50 HP). Upon death, splits into 2 mini copies with 25 HP Full each, which subsequently split into 2 micro copies with 10 HP Full each when defeated.',
+  },
+  FLAMING: {
+    title: 'FLAMING',
+    category: 'EFFECT TAG',
+    icon: <FlameIcon size={14} color="#f97316" />,
+    description: 'Imbued with perpetual celestial fire. Radiates an intense heat corona, leaves fiery ember trails, and ignites struck enemies with Burn.',
+  },
+  BURN: {
+    title: 'BURN',
+    category: 'STATUS TAG',
+    icon: <BurnIcon size={14} color="#f97316" />,
+    description: 'Scorching fire damage dealing consecutive ticks (-2, -2, -1, -1) over time. Unlike puncture bleed, Burn bypasses armor bleed resistances.',
   },
 };
 
@@ -826,6 +838,62 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
+  // Fire Ball: Radiant blazing heat bloom & licking outer flame tongues
+  if (config.id === BALL_TYPES.FIRE) {
+    ctx.save();
+    // Warm radiant heat aura blooming outwards
+    const heatBloom = ctx.createRadialGradient(x, y, radius * 0.7, x, y, radius * 1.55);
+    heatBloom.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
+    heatBloom.addColorStop(0.5, 'rgba(234, 88, 12, 0.22)');
+    heatBloom.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    ctx.fillStyle = heatBloom;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.55, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 12 dynamic licking flame tongues around perimeter
+    const flameTongues = 12;
+    for (let f = 0; f < flameTongues; f++) {
+      const fAng = rotationAngle * 1.6 + (f * Math.PI * 2) / flameTongues;
+      const waveMod = Math.sin(fAng * 3 + rotationAngle * 3.5);
+      const flameLen = radius * (0.28 + 0.16 * waveMod);
+      const fxTip = x + Math.cos(fAng) * (radius + flameLen);
+      const fyTip = y + Math.sin(fAng) * (radius + flameLen);
+      const bAng1 = fAng + 0.19;
+      const bAng2 = fAng - 0.19;
+
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(bAng1) * (radius - 2), y + Math.sin(bAng1) * (radius - 2));
+      ctx.quadraticCurveTo(
+        x + Math.cos(fAng) * (radius + flameLen * 0.45) - Math.sin(fAng) * 4,
+        y + Math.sin(fAng) * (radius + flameLen * 0.45) + Math.cos(fAng) * 4,
+        fxTip,
+        fyTip
+      );
+      ctx.quadraticCurveTo(
+        x + Math.cos(fAng) * (radius + flameLen * 0.45) + Math.sin(fAng) * 3,
+        y + Math.sin(fAng) * (radius + flameLen * 0.45) - Math.cos(fAng) * 3,
+        x + Math.cos(bAng2) * (radius - 2),
+        y + Math.sin(bAng2) * (radius - 2)
+      );
+      ctx.closePath();
+
+      const fGrad = ctx.createLinearGradient(x + Math.cos(fAng) * radius, y + Math.sin(fAng) * radius, fxTip, fyTip);
+      if (isHit) {
+        fGrad.addColorStop(0, '#ffffff');
+        fGrad.addColorStop(1, '#ffffff');
+      } else {
+        fGrad.addColorStop(0, '#ea580c');
+        fGrad.addColorStop(0.45, '#f97316');
+        fGrad.addColorStop(0.85, '#fef08a');
+        fGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+      }
+      ctx.fillStyle = fGrad;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // 3D Sphere Body
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -1175,6 +1243,53 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
+    // Fire Ball: Swirling solar plasma rings, incandescent star core, and solar flares
+    if (config.id === BALL_TYPES.FIRE) {
+      ctx.save();
+      ctx.clip();
+      ctx.translate(x, y);
+      ctx.rotate(rotationAngle);
+
+      // Swirling plasma filaments
+      for (let w = 0; w < 3; w++) {
+        ctx.strokeStyle = w === 0 ? 'rgba(254, 240, 138, 0.7)' : (w === 1 ? 'rgba(249, 115, 22, 0.55)' : 'rgba(124, 45, 18, 0.45)');
+        ctx.lineWidth = Math.max(1.6, radius * 0.08);
+        ctx.beginPath();
+        const arcR = radius * (0.35 + w * 0.22);
+        ctx.arc(0, 0, arcR, w * 1.5, w * 1.5 + Math.PI * 1.25);
+        ctx.stroke();
+      }
+
+      // Blazing solar star core
+      const coreR = radius * 0.42;
+      const sunCore = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
+      sunCore.addColorStop(0, '#ffffff');
+      sunCore.addColorStop(0.35, '#fef08a');
+      sunCore.addColorStop(0.7, '#f97316');
+      sunCore.addColorStop(1, 'rgba(234, 88, 12, 0)');
+      ctx.fillStyle = sunCore;
+      ctx.beginPath();
+      ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Incandescent solar flares
+      [0.35, 1.45, 2.6, 3.85, 5.15].forEach(ang => {
+        const dist = radius * 0.62;
+        ctx.beginPath();
+        ctx.arc(Math.cos(ang) * dist, Math.sin(ang) * dist, Math.max(1.5, radius * 0.07), 0, Math.PI * 2);
+        ctx.fillStyle = '#fef08a';
+        ctx.fill();
+      });
+
+      // Specular sheen
+      ctx.beginPath();
+      ctx.arc(-radius * 0.25, -radius * 0.25, radius * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
     // Shield active: Body crystalline metallic shine overlay
     if (shield > 0) {
       ctx.save();
@@ -1255,7 +1370,7 @@ function BallThumbnailPreview({ config, theme }) {
     ctx.strokeRect(0, 0, 64, 64);
 
     const previewRadius = Math.min(20, config.radius * 0.54);
-    const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : 0)));
+    const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0))));
     draw3DBall(ctx, 32, 32, previewRadius, config, null, rotation);
   }, [config, theme]);
 
@@ -1482,6 +1597,10 @@ function BallBattleGame() {
         bleedTimer: 0,
         bleedSource: null,
         bleedQueue: [],
+        burnTicksLeft: 0,
+        burnTimer: 0,
+        burnSource: null,
+        burnQueue: [],
         isDead: false,
         isDying: false,
         deathTimer: 0,
@@ -1506,6 +1625,7 @@ function BallBattleGame() {
         gunCooldown: 3000,
         thornAngle: b.angle || 0,
         multiAngle: b.angle || 0,
+        fireAngle: b.angle || 0,
         splitStage: b.config?.splitStage || 1,
         targetRadius: b.config?.radius || b.radius,
         targetMass: b.config?.mass || b.mass,
@@ -1784,19 +1904,20 @@ function BallBattleGame() {
       }
     };
 
-    const spawnDamageText = (x, y, amount, isCritical = false, isShieldAbsorb = false) => {
+    const spawnDamageText = (x, y, amount, isCritical = false, isShieldAbsorb = false, isBurn = false) => {
       const offsetX = (Math.random() - 0.5) * 16;
-      const clampedAmount = Math.max(4, Math.min(30, amount));
+      const clampedAmount = Math.max(1, Math.min(30, amount));
       const fontSize = Math.round(16 + (clampedAmount - 4) * 0.9 + (isCritical ? 7 : 0));
 
       physicsRef.current.damageTexts.push({
         x: x + offsetX,
         y: y - 12,
-        text: isShieldAbsorb ? `🛡 -${Math.round(amount)}` : `-${Math.round(amount)}`,
+        text: isShieldAbsorb ? `🛡 -${Math.round(amount)}` : (isBurn ? `🔥 -${Math.round(amount)}` : `-${Math.round(amount)}`),
         fontSize,
         opacity: 1.0,
         isCritical,
         isShieldAbsorb,
+        isBurn,
         life: 1.0,
         decay: 0.02,
         vy: -1.3,
@@ -1852,7 +1973,7 @@ function BallBattleGame() {
       });
     };
 
-    const applyDamage = (victim, amount, attacker, isCritical = false) => {
+    const applyDamage = (victim, amount, attacker, isCritical = false, isBurn = false) => {
       if (victim.isDead || victim.isDying) return;
 
       if (victim.type === BALL_TYPES.STEEL) {
@@ -1869,7 +1990,7 @@ function BallBattleGame() {
       if (victim.shield > 0) {
         if (victim.shield >= remainingDmg) {
           victim.shield -= remainingDmg;
-          spawnDamageText(victim.x, victim.y, remainingDmg, false, true);
+          spawnDamageText(victim.x, victim.y, remainingDmg, false, true, isBurn);
           attacker.totalDamageDealt += remainingDmg;
           victim.hitFlashTimer = 80;
           victim.hitShakeTimer = 60;
@@ -1877,7 +1998,7 @@ function BallBattleGame() {
           return;
         } else {
           remainingDmg -= victim.shield;
-          spawnDamageText(victim.x, victim.y, victim.shield, false, true);
+          spawnDamageText(victim.x, victim.y, victim.shield, false, true, isBurn);
           victim.shield = 0;
         }
       }
@@ -1913,7 +2034,7 @@ function BallBattleGame() {
         sound.play('glassHit', 0.85);
       }
 
-      spawnDamageText(victim.x, victim.y, remainingDmg, isCritical);
+      spawnDamageText(victim.x, victim.y, remainingDmg, isCritical, false, isBurn);
 
       // Ball death check - enter animated dying delay before detonating
       if (victim.hp <= 0 && !victim.isDead && !victim.isDying) {
@@ -2111,6 +2232,10 @@ function BallBattleGame() {
                   bleedTimer: 0,
                   bleedSource: null,
                   bleedQueue: [],
+                  burnTicksLeft: 0,
+                  burnTimer: 0,
+                  burnSource: null,
+                  burnQueue: [],
                   isDead: false,
                   isDying: false,
                   deathTimer: 0,
@@ -2202,6 +2327,45 @@ function BallBattleGame() {
           ball.multiAngle = (ball.multiAngle || 0) + safeDt * 3.4;
         }
 
+        // Fire Ball: Blazing flame trail, rotating solar corona, and ember particles
+        if (ball.type === BALL_TYPES.FIRE && !ball.isDead && !ball.isDying) {
+          ball.fireAngle = (ball.fireAngle || 0) + safeDt * 3.6;
+          trailPoints.push({
+            x: ball.x,
+            y: ball.y,
+            radius: ball.radius * 0.88,
+            color: '#f97316',
+            life: 0.42,
+          });
+
+          if (Math.random() < 0.6) {
+            particles.push({
+              x: ball.x + (Math.random() - 0.5) * ball.radius * 0.85,
+              y: ball.y + (Math.random() - 0.5) * ball.radius * 0.85,
+              vx: (Math.random() - 0.5) * 1.5 - ball.vx * 0.12,
+              vy: -0.8 - Math.random() * 1.8 - ball.vy * 0.12,
+              life: 1.0,
+              decay: 0.045 + Math.random() * 0.035,
+              color: Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.3 ? '#fef08a' : '#ea580c'),
+              size: Math.random() * 2.8 + 1.8,
+            });
+          }
+        }
+
+        // Burning victim: Wisps of flame and charcoal smoke rising upward
+        if (ball.burnTicksLeft > 0 && !ball.isDead && !ball.isDying && Math.random() < 0.45) {
+          particles.push({
+            x: ball.x + (Math.random() - 0.5) * ball.radius * 0.85,
+            y: ball.y + (Math.random() - 0.5) * ball.radius * 0.85,
+            vx: (Math.random() - 0.5) * 0.9,
+            vy: -1.2 - Math.random() * 1.8,
+            life: 1.0,
+            decay: 0.05 + Math.random() * 0.03,
+            color: Math.random() > 0.4 ? '#f97316' : '#fde047',
+            size: Math.random() * 2.2 + 1.6,
+          });
+        }
+
         // Accelerator Ball: Accelerates continuously the longer the fight endures
         if (ball.type === BALL_TYPES.ACCELERATOR && !ball.isDead && !ball.isDying && !isSoloWinner) {
           const maxSpd = ball.config?.maxSpeed || 12.0;
@@ -2246,6 +2410,23 @@ function BallBattleGame() {
             spawnParticles(ball.x, ball.y, '#ef4444', 5, 0.9);
             spawnParticles(ball.x, ball.y, '#fb7185', 3, 0.7);
             sound.play('bleed', 0.8);
+          }
+        }
+
+        // Process Burn Side Effect (queue-based true fire damage ticks: -2, -2, -1, -1)
+        if (ball.burnTicksLeft > 0 && !ball.isDead) {
+          ball.burnTimer -= safeDt * 1000;
+          if (ball.burnTimer <= 0) {
+            ball.burnTicksLeft -= 1;
+            ball.burnTimer = 480; // next tick delay
+            const tickDmg = (ball.burnQueue && ball.burnQueue.length > 0) ? ball.burnQueue.shift() : 1;
+            applyDamage(ball, tickDmg, ball.burnSource || ball, false, true);
+
+            // Searing flame particle burst
+            spawnParticles(ball.x, ball.y, '#f97316', 7, 1.2);
+            spawnParticles(ball.x, ball.y, '#fde047', 4, 1.4);
+            spawnParticles(ball.x, ball.y, '#7c2d12', 3, 0.8);
+            sound.play('fireballBurn', 0.85);
           }
         }
 
@@ -2401,31 +2582,38 @@ function BallBattleGame() {
             }
           };
 
+          const playWallBounce = () => {
+            if (ball.type === BALL_TYPES.FIRE) {
+              sound.play('fireballHitWall', 0.9);
+              spawnParticles(ball.x, ball.y, '#f97316', 5, 1.4);
+              spawnParticles(ball.x, ball.y, '#fef08a', 3, 1.6);
+            } else {
+              sound.play('wallBounce', 0.55);
+              spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
+            }
+          };
+
           if (ball.x < minX) {
             ball.x = minX;
             ball.vx = Math.abs(ball.vx);
-            spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
-            sound.play('wallBounce', 0.55);
+            playWallBounce();
             checkPlantThornTrap('left', 2, ball.y);
           } else if (ball.x > maxX) {
             ball.x = maxX;
             ball.vx = -Math.abs(ball.vx);
-            spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
-            sound.play('wallBounce', 0.55);
+            playWallBounce();
             checkPlantThornTrap('right', CANVAS_SIZE - 2, ball.y);
           }
 
           if (ball.y < minY) {
             ball.y = minY;
             ball.vy = Math.abs(ball.vy);
-            spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
-            sound.play('wallBounce', 0.55);
+            playWallBounce();
             checkPlantThornTrap('top', ball.x, 2);
           } else if (ball.y > maxY) {
             ball.y = maxY;
             ball.vy = -Math.abs(ball.vy);
-            spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
-            sound.play('wallBounce', 0.55);
+            playWallBounce();
             checkPlantThornTrap('bottom', ball.x, CANVAS_SIZE - 2);
           }
         }
@@ -2473,7 +2661,9 @@ function BallBattleGame() {
               const midY = (b1.y + b2.y) / 2;
               spawnParticles(midX, midY, '#f97316', 5, 0.9);
 
-              if (b1.type === BALL_TYPES.ACCELERATOR || b2.type === BALL_TYPES.ACCELERATOR) {
+              if (b1.type === BALL_TYPES.FIRE || b2.type === BALL_TYPES.FIRE) {
+                sound.play('fireballHit', 0.95);
+              } else if (b1.type === BALL_TYPES.ACCELERATOR || b2.type === BALL_TYPES.ACCELERATOR) {
                 sound.play('acceleratorHit', 0.9);
               } else if (b1.type === BALL_TYPES.GROW || b2.type === BALL_TYPES.GROW) {
                 sound.play('growHit', 0.85);
@@ -2557,6 +2747,25 @@ function BallBattleGame() {
                 } else {
                   spawnParticles(b1.x, b1.y, '#94a3b8', 6, 1.2);
                 }
+              }
+
+              // Fire Ball: Direct body collision ignites enemy with Burn (-2, -2, -1, -1)
+              if (b1.type === BALL_TYPES.FIRE && b1.team !== b2.team && b2.type !== BALL_TYPES.FIRE && !b2.isDead && !b2.isDying) {
+                b2.burnTicksLeft = 4;
+                b2.burnTimer = 460;
+                b2.burnSource = b1;
+                b2.burnQueue = [2, 2, 1, 1];
+                spawnParticles(b2.x, b2.y, '#f97316', 10, 1.8);
+                spawnParticles(b2.x, b2.y, '#fef08a', 6, 2.0);
+              }
+
+              if (b2.type === BALL_TYPES.FIRE && b2.team !== b1.team && b1.type !== BALL_TYPES.FIRE && !b1.isDead && !b1.isDying) {
+                b1.burnTicksLeft = 4;
+                b1.burnTimer = 460;
+                b1.burnSource = b2;
+                b1.burnQueue = [2, 2, 1, 1];
+                spawnParticles(b1.x, b1.y, '#f97316', 10, 1.8);
+                spawnParticles(b1.x, b1.y, '#fef08a', 6, 2.0);
               }
 
               applyDamage(b2, dmgB1ToB2, b1);
@@ -3206,23 +3415,25 @@ function BallBattleGame() {
 
         const currentRot = simState === 'planning'
           ? ball.angle
-          : (ball.type === BALL_TYPES.SPIKE
-            ? (ball.spikeAngle || 0)
-            : (ball.type === BALL_TYPES.HAMMER
-              ? (ball.hammerAngle || 0)
-              : (ball.type === BALL_TYPES.KNIFE
-                ? (ball.knifeAngle || 0)
-                : (ball.type === BALL_TYPES.SHARD
-                  ? (ball.shardAngle || 0)
-                  : (ball.type === BALL_TYPES.GUN
-                    ? (ball.gunAngle || 0)
-                    : (ball.type === BALL_TYPES.THORN
-                      ? (ball.thornAngle || 0)
-                      : (ball.type === BALL_TYPES.MULTI
-                        ? (ball.multiAngle || 0)
-                        : (ball.type === BALL_TYPES.ACCELERATOR
-                          ? Math.atan2(ball.vy || 0, ball.vx || 1)
-                          : (ball.swordAngle || 0)))))))));
+          : (ball.type === BALL_TYPES.FIRE
+            ? (ball.fireAngle || 0)
+            : (ball.type === BALL_TYPES.SPIKE
+              ? (ball.spikeAngle || 0)
+              : (ball.type === BALL_TYPES.HAMMER
+                ? (ball.hammerAngle || 0)
+                : (ball.type === BALL_TYPES.KNIFE
+                  ? (ball.knifeAngle || 0)
+                  : (ball.type === BALL_TYPES.SHARD
+                    ? (ball.shardAngle || 0)
+                    : (ball.type === BALL_TYPES.GUN
+                      ? (ball.gunAngle || 0)
+                      : (ball.type === BALL_TYPES.THORN
+                        ? (ball.thornAngle || 0)
+                        : (ball.type === BALL_TYPES.MULTI
+                          ? (ball.multiAngle || 0)
+                          : (ball.type === BALL_TYPES.ACCELERATOR
+                            ? Math.atan2(ball.vy || 0, ball.vx || 1)
+                            : (ball.swordAngle || 0))))))))));
         const config = ball.config || BALL_CONFIGS[ball.type];
 
         const hasTeamMode = (simState === 'planning' ? placedBalls : physicsRef.current.balls)
@@ -3397,13 +3608,13 @@ function BallBattleGame() {
           ctx.font = `800 ${dt.fontSize}px "JetBrains Mono", monospace`;
           ctx.textAlign = 'center';
           if (isLight) {
-            ctx.shadowColor = 'rgba(0,0,0,0.18)';
-            ctx.shadowBlur = 4;
-            ctx.fillStyle = dt.isShieldAbsorb ? '#0284c7' : (dt.isCritical ? '#b91c1c' : '#dc2626');
+            ctx.shadowColor = dt.isBurn ? 'rgba(234, 88, 12, 0.45)' : 'rgba(0,0,0,0.18)';
+            ctx.shadowBlur = dt.isBurn ? 6 : 4;
+            ctx.fillStyle = dt.isShieldAbsorb ? '#0284c7' : (dt.isBurn ? '#c2410c' : (dt.isCritical ? '#b91c1c' : '#dc2626'));
           } else {
-            ctx.shadowColor = '#000000';
-            ctx.shadowBlur = 6;
-            ctx.fillStyle = dt.isShieldAbsorb ? '#38bdf8' : (dt.isCritical ? '#f87171' : '#ef4444');
+            ctx.shadowColor = dt.isBurn ? '#ea580c' : '#000000';
+            ctx.shadowBlur = dt.isBurn ? 8 : 6;
+            ctx.fillStyle = dt.isShieldAbsorb ? '#38bdf8' : (dt.isBurn ? '#f97316' : (dt.isCritical ? '#f87171' : '#ef4444'));
           }
           ctx.fillText(dt.text, dt.x, dt.y);
           ctx.restore();
@@ -3866,6 +4077,38 @@ function BallBattleGame() {
                           Acts like a Fast Ball with half HP (<strong>50 HP</strong>). Upon death, splits into 2 mini copies with <strong>25 HP Full</strong> each, which subsequently split into 2 micro copies with <strong>10 HP Full</strong> each when defeated.
                         </td>
                       </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-flaming"
+                            onMouseEnter={(e) => showTooltip(e, 'FLAMING')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <FlameIcon size={13} color="#f97316" /> FLAMING
+                          </span>
+                        </td>
+                        <td className="col-source">Fire Ball Innate Trait</td>
+                        <td className="col-description">
+                          Self-imbued fiery aura radiating heat. Radiates dynamic outer flames, leaves an ember trail, and ignites struck enemies with Burn.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-burn"
+                            onMouseEnter={(e) => showTooltip(e, 'BURN')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <BurnIcon size={13} color="#f97316" /> BURN
+                          </span>
+                        </td>
+                        <td className="col-source">Fire Ball Ability</td>
+                        <td className="col-description">
+                          Striking an enemy ignites them with <strong>Burn (-2, -2, -1, -1)</strong>, dealing 4 consecutive ticks of true fire damage. Unlike puncture bleed, Burn bypasses armor bleed immunity.
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -4232,6 +4475,15 @@ function BallBattleGame() {
                                   <BleedIcon size={13} color="#ef4444" /> BLEED
                                 </span>
                               )}
+                              {b.burnTicksLeft > 0 && (
+                                <span
+                                  className="hud-effect-badge burn-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'BURN')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BurnIcon size={13} color="#f97316" /> BURN
+                                </span>
+                              )}
                               {b.shardTargetTimer > 0 && !b.isDead && (
                                 <span
                                   className="hud-effect-badge shard-target-active"
@@ -4403,6 +4655,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <SplitIcon size={13} color="#d946ef" /> SPLIT
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.FIRE && (
+                                <span
+                                  className="hud-effect-badge flaming-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'FLAMING')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <FlameIcon size={13} color="#f97316" /> FLAMING
                                 </span>
                               )}
                             </div>
@@ -4636,6 +4897,15 @@ function BallBattleGame() {
                                   <BleedIcon size={13} color="#ef4444" /> BLEED
                                 </span>
                               )}
+                              {b.burnTicksLeft > 0 && (
+                                <span
+                                  className="hud-effect-badge burn-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'BURN')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BurnIcon size={13} color="#f97316" /> BURN
+                                </span>
+                              )}
                               {b.shardTargetTimer > 0 && !b.isDead && (
                                 <span
                                   className="hud-effect-badge shard-target-active"
@@ -4807,6 +5077,15 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <SplitIcon size={13} color="#d946ef" /> SPLIT
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.FIRE && (
+                                <span
+                                  className="hud-effect-badge flaming-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'FLAMING')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <FlameIcon size={13} color="#f97316" /> FLAMING
                                 </span>
                               )}
                             </div>

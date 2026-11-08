@@ -834,6 +834,24 @@ html, body, #root {
   100% { border-color: #c084fc; box-shadow: 0 0 7px rgba(192, 132, 252, 0.55); }
 }
 
+.hud-effect-badge.flaming-active {
+  animation: flamePulse 1.2s infinite alternate;
+}
+
+@keyframes flamePulse {
+  0% { border-color: #f97316; box-shadow: 0 0 3px rgba(249, 115, 22, 0.4); }
+  100% { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.7); }
+}
+
+.hud-effect-badge.burn-active {
+  animation: burnPulse 0.9s infinite alternate;
+}
+
+@keyframes burnPulse {
+  0% { border-color: #ea580c; box-shadow: 0 0 3px rgba(234, 88, 12, 0.5); }
+  100% { border-color: #ef4444; box-shadow: 0 0 9px rgba(239, 68, 68, 0.8); }
+}
+
 .sim-team-tallies {
   display: flex;
   align-items: center;

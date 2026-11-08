@@ -17,6 +17,7 @@ export const BALL_TYPES = {
   GUN: 'GUN',
   THORN: 'THORN',
   MULTI: 'MULTI',
+  FIRE: 'FIRE',
 };
 
 export const RARITIES = {
@@ -234,7 +235,7 @@ export const BALL_CONFIGS = {
   [BALL_TYPES.SHARD]: {
     id: BALL_TYPES.SHARD,
     name: 'Shard Ball',
-    rarity: RARITIES.UNIQUE,
+    rarity: RARITIES.EPIC,
     description: 'Striking an enemy locks onto them and shoots 6 consecutive homing shards that deal 1 damage each.',
     baseHp: 100,
     damage: 8,
@@ -266,6 +267,22 @@ export const BALL_CONFIGS = {
     special: 'Gun Cannon (3s Cooldown)',
     barrelLength: 48,
   },
+  [BALL_TYPES.MULTI]: {
+    id: BALL_TYPES.MULTI,
+    name: 'Multi Ball',
+    rarity: RARITIES.UNIQUE,
+    description: 'Moves with high velocity like Fast Ball with half HP (50 HP). Upon death, splits into 2 mini copies (25 HP each), which subsequently split into 2 micro copies (10 HP each) when defeated.',
+    baseHp: 50,
+    damage: 7,
+    speed: 3.5,
+    radius: 34,
+    mass: 0.75,
+    bodyColor: '#c026d3',      // energetic vibrant fuchsia
+    highlightColor: '#f0abfc', // bright electric pink glint
+    shadowColor: '#701a75',    // deep dark fuchsia shadow
+    special: 'Split on Death',
+    splitStage: 1,
+  },
   [BALL_TYPES.THORN]: {
     id: BALL_TYPES.THORN,
     name: 'Thorn Ball',
@@ -283,21 +300,22 @@ export const BALL_CONFIGS = {
     special: 'Thorns & Bleed',
     trapDamage: 2,
   },
-  [BALL_TYPES.MULTI]: {
-    id: BALL_TYPES.MULTI,
-    name: 'Multi Ball',
-    rarity: RARITIES.EPIC,
-    description: 'Moves with high velocity like Fast Ball with half HP (50 HP). Upon death, splits into 2 mini copies (25 HP each), which subsequently split into 2 micro copies (10 HP each) when defeated.',
-    baseHp: 50,
-    damage: 7,
-    speed: 3.5,
-    radius: 34,
-    mass: 0.75,
-    bodyColor: '#c026d3',      // energetic vibrant fuchsia
-    highlightColor: '#f0abfc', // bright electric pink glint
-    shadowColor: '#701a75',    // deep dark fuchsia shadow
-    special: 'Split on Death',
-    splitStage: 1,
+  [BALL_TYPES.FIRE]: {
+    id: BALL_TYPES.FIRE,
+    name: 'Fire Ball',
+    rarity: RARITIES.LEGENDARY,
+    description: 'A raging blazing ball with a perpetual Flaming aura. Struck enemies are ignited with Burn (-2, -2, -1, -1), scorching them with true fire damage over time.',
+    baseHp: 100,
+    damage: 9,
+    speed: 2.3,
+    radius: 38,
+    mass: 1.1,
+    bodyColor: '#ea580c',      // fiery bright blaze orange
+    highlightColor: '#fef08a', // radiant white-hot solar yellow
+    shadowColor: '#7c2d12',    // deep dark ember charcoal shadow
+    flameColor: '#f97316',
+    special: 'Flaming & Burn',
+    inflicts: 'Burn (-2 -2 -1 -1)',
   },
 };
 
