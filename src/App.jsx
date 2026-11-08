@@ -156,7 +156,7 @@ const EFFECT_TOOLTIPS = {
     title: 'SNIPER LOCK-ON',
     category: 'ABILITY TAG',
     icon: <SniperIcon size={14} color="#38bdf8" />,
-    description: 'Periodically freezes in midair to lock a precision laser sight onto the nearest enemy, discharging a devastating 45 DMG armor-piercing sniper round.',
+    description: 'Periodically freezes in midair to lock a precision laser sight onto the nearest enemy, discharging an armor-piercing 20 DMG sniper round.',
   },
 };
 
@@ -3060,7 +3060,7 @@ function BallBattleGame() {
                 ownerId: ball.id,
                 ownerTeam: ball.team,
                 ownerBall: ball,
-                damage: ball.config?.bulletDamage || 45,
+                damage: ball.config?.bulletDamage || 20,
                 life: 2.2,
                 radius: 6,
                 isSniper: true,
@@ -5392,7 +5392,7 @@ function BallBattleGame() {
 
                             {/* Sniper Ball 4-Second Sniper Lock-On Bar */}
                             {b.type === BALL_TYPES.SNIPER && (
-                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 45 DMG bullet">
+                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 20 DMG bullet">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
@@ -5884,7 +5884,7 @@ function BallBattleGame() {
 
                             {/* Sniper Ball 4-Second Sniper Lock-On Bar */}
                             {b.type === BALL_TYPES.SNIPER && (
-                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 45 DMG bullet">
+                              <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 20 DMG bullet">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
