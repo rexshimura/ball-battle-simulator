@@ -3806,7 +3806,7 @@ function BallBattleGame() {
             if (ball.sniperCooldown <= 0 && nearestEnemy) {
               // Trigger aim state & audio
               ball.sniperState = 'aiming';
-              ball.sniperAimTimer = ball.config?.aimDuration || 1800;
+              ball.sniperAimTimer = ball.config?.aimDuration || 1000;
               ball.vx = 0;
               ball.vy = 0;
               sound.play('sniperAimAndShoot', 0.95);
@@ -7068,7 +7068,7 @@ function BallBattleGame() {
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming'
-                                      ? `AIMING ${(((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1800) / 1000).toFixed(1)}s`
+                                      ? `AIMING ${(((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1000) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
@@ -7076,7 +7076,7 @@ function BallBattleGame() {
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
-                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1800)) * 100))}%`
+                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1000)) * 100))}%`
                                         : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',
@@ -7684,7 +7684,7 @@ function BallBattleGame() {
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming'
-                                      ? `AIMING ${(((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1800) / 1000).toFixed(1)}s`
+                                      ? `AIMING ${(((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1000) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
@@ -7692,7 +7692,7 @@ function BallBattleGame() {
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
-                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1800)) * 100))}%`
+                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1000)) * 100))}%`
                                         : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',

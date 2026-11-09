@@ -400,7 +400,7 @@ export const BALL_CONFIGS = {
     mass: 1.05,
     bulletDamage: 15,
     sniperCooldown: 4000,
-    aimDuration: 1800, // +1.2s delay for precision lock-on (1.8s total aiming freeze)
+    aimDuration: 1000, // Deducted by 0.8s (1.0s precision aim freeze)
     bodyColor: '#1e293b',      // Matte tactical slate
     highlightColor: '#38bdf8', // Precision cyan laser optic sheen
     shadowColor: '#090d16',    // Deep stealth black shadow
