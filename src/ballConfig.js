@@ -18,6 +18,7 @@ export const BALL_TYPES = {
   GLASS: 'GLASS',
   HAMMER: 'HAMMER',
   GROW: 'GROW',
+  DUAL_SWORD: 'DUAL_SWORD',
 
   // Unique
   GUN: 'GUN',
@@ -271,27 +272,27 @@ export const BALL_CONFIGS = {
     shadowColor: '#15803d',
     special: 'Size Grow & Heavy (2.8+)',
   },
+  [BALL_TYPES.DUAL_SWORD]: {
+    id: BALL_TYPES.DUAL_SWORD,
+    name: 'Dual Sword Ball',
+    rarity: RARITIES.RARE,
+    description: 'Equipped with dual rotating swords mounted in front and back. Slashes opposing units from both directions with 18 blade damage.',
+    baseHp: 100,
+    damage: 8,         // Body hitbox deals 8 damage
+    bladeDamage: 18,   // Each sword blade deals 18 damage
+    speed: 2.5,
+    radius: 36,
+    mass: 1.1,
+    bodyColor: '#f87171',      // light red body of the sword ball
+    highlightColor: '#fef2f2', // bright light shine
+    shadowColor: '#b91c1c',    // deep dark red
+    special: 'Dual Spinning Blades',
+    bladeLength: 50,
+  },
+
   // ==========================================
   // UNIQUE TIER
   // ==========================================
-  [BALL_TYPES.ACCELERATOR]: {
-    id: BALL_TYPES.ACCELERATOR,
-    name: 'Accelerator Ball',
-    rarity: RARITIES.UNIQUE,
-    description: 'The longer the fight, the faster this ball accelerates (up to 12.0 max speed), scaling its kinetic collision damage higher as speed increases.',
-    baseHp: 100,
-    damage: 8,
-    speed: 2.6,
-    initialSpeed: 2.6,
-    maxSpeed: 12.0,
-    accelRate: 0.32, // gains speed every second
-    radius: 35,
-    mass: 0.9,
-    bodyColor: '#1d4ed8',      // darker, richer cobalt blue
-    highlightColor: '#93c5fa', // bright electric blue glint
-    shadowColor: '#172554',    // midnight deep blue shadow
-    special: 'Rapid & Accelerate (Damage with Speed)',
-  },
   [BALL_TYPES.GUN]: {
     id: BALL_TYPES.GUN,
     name: 'Gun Ball',
@@ -330,6 +331,24 @@ export const BALL_CONFIGS = {
   // ==========================================
   // EPIC TIER
   // ==========================================
+  [BALL_TYPES.ACCELERATOR]: {
+    id: BALL_TYPES.ACCELERATOR,
+    name: 'Accelerator Ball',
+    rarity: RARITIES.EPIC,
+    description: 'The longer the fight, the faster this ball accelerates (up to 12.0 max speed), scaling its kinetic collision damage higher as speed increases.',
+    baseHp: 100,
+    damage: 8,
+    speed: 2.6,
+    initialSpeed: 2.6,
+    maxSpeed: 12.0,
+    accelRate: 0.32, // gains speed every second
+    radius: 35,
+    mass: 0.9,
+    bodyColor: '#1d4ed8',      // darker, richer cobalt blue
+    highlightColor: '#93c5fa', // bright electric blue glint
+    shadowColor: '#172554',    // midnight deep blue shadow
+    special: 'Rapid & Accelerate (Damage with Speed)',
+  },
   [BALL_TYPES.SHARD]: {
     id: BALL_TYPES.SHARD,
     name: 'Shard Ball',
