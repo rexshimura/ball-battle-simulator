@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon, SpitFireIcon, SpitFireTargetIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -23,6 +23,19 @@ function getHealthColor(percent) {
     const b = Math.round(8 + (68 - 8) * factor);
     return `rgb(${r}, ${g}, ${b})`;
   }
+}
+
+// Extract weapon damage if the ball is equipped with an external weapon
+function getWeaponDamage(ball) {
+  const cfg = ball?.config || (ball?.type ? BALL_CONFIGS[ball.type] : ball);
+  if (!cfg) return null;
+  if (cfg.bladeDamage !== undefined) return cfg.bladeDamage;
+  if (cfg.knifeDamage !== undefined) return cfg.knifeDamage;
+  if (cfg.daggerDamage !== undefined) return cfg.daggerDamage;
+  if (cfg.hammerDamage !== undefined) return cfg.hammerDamage;
+  if (cfg.bulletDamage !== undefined) return cfg.bulletDamage;
+  if (cfg.trapDamage !== undefined) return cfg.trapDamage;
+  return null;
 }
 
 const EFFECT_TOOLTIPS = {
@@ -90,7 +103,7 @@ const EFFECT_TOOLTIPS = {
     title: 'SIZE GROW',
     category: 'EFFECT TAG',
     icon: <GrowIcon size={14} color="#22c55e" />,
-    description: 'Every time it collides with an enemy, it physically expands in size and increases mass up to 6.0, gaining the Heavy Effect at 2.8+ size.',
+    description: 'Every time it collides with an enemy or absorbs spit fire hits, it physically expands in size and increases mass up to 10.0, gaining the Heavy Effect at 2.8+ size.',
   },
   ACCELERATE: {
     title: 'ACCELERATE',
@@ -163,6 +176,54 @@ const EFFECT_TOOLTIPS = {
     category: 'WEAPON TAG',
     icon: <DiceIcon size={14} color="#f59e0b" />,
     description: 'A casino die starting with a mark of 1 (1 DMG). After striking an enemy twice, it rolls random damage: Low 5-12 (75%), Mid 15-25 (20%), High 30-50 (5%), or God 99 (1%). Features a 7-hit Pity System: taking damage 7 times absorbs the pity to transform any Mid or Low roll into a High Roll (30-50 DMG)!',
+  },
+  INCINERATION: {
+    title: 'INCINERATION',
+    category: 'MYTHICAL ABILITY',
+    icon: <SpitFireIcon size={14} color="#0ea5e9" />,
+    description: 'Imbued with mythical celestial blue fire. Leaves an azure ground trail, incinerates enemy Thorn Traps on contact, and inflicts Scorch and Flame Lock for 5 seconds while unleashing curving mini blue flame barrages.',
+  },
+  SCORCH: {
+    title: 'SCORCH',
+    category: 'STATUS TAG',
+    icon: <BurnIcon size={14} color="#38bdf8" />,
+    description: 'Scorching celestial blue fire damage ticks dealing true fire damage over an extended duration. Bypasses armor bleed immunity.',
+  },
+  FLAME_LOCK: {
+    title: 'FLAME LOCK',
+    category: 'STATUS TAG',
+    icon: <SpitFireTargetIcon size={14} color="#0ea5e9" />,
+    description: 'Locked by Spit Fire Ball for 5 seconds, targeted by a curving barrage of mini celestial blue flames that deal 1 DMG and inflict Scorch.',
+  },
+  SPIT_FIRE: {
+    title: 'INCINERATION',
+    category: 'MYTHICAL ABILITY',
+    icon: <SpitFireIcon size={14} color="#0ea5e9" />,
+    description: 'Imbued with mythical celestial blue fire. Leaves an azure ground trail, incinerates enemy Thorn Traps on contact, and inflicts Scorch and Flame Lock for 5 seconds while unleashing curving mini blue flame barrages.',
+  },
+  SPIT_FIRE_TARGET: {
+    title: 'FLAME LOCK',
+    category: 'STATUS TAG',
+    icon: <SpitFireTargetIcon size={14} color="#0ea5e9" />,
+    description: 'Locked by Spit Fire Ball for 5 seconds, targeted by a curving barrage of mini celestial blue flames that deal 1 DMG and inflict Scorch.',
+  },
+  DAGGER_HIT: {
+    title: 'DAGGER HIT',
+    category: 'INFLICT',
+    icon: <DaggerIcon size={14} color="#2dd4bf" />,
+    description: 'Stabbed by an embedded combat dagger. Reduces Movement Speed by 20% and Damage Dealt by 25% until the dagger is extracted.',
+  },
+  DAGGER_PULL: {
+    title: 'DAGGER PULL',
+    category: 'INFLICT (SELF)',
+    icon: <DaggerIcon size={14} color="#38bdf8" />,
+    description: 'Self-inflict ability that calls the thrown combat dagger back to Dagger Ball. Rips out embedded daggers from enemies or wall surfaces to re-arm.',
+  },
+  DAGGER: {
+    title: 'DAGGER',
+    category: 'WEAPON TAG',
+    icon: <DaggerIcon size={14} color="#2dd4bf" />,
+    description: 'Equipped with a thrown combat dagger dealing 14 projectile damage that embeds into victims or arena walls, inflicting Dagger Hit and Bleed.',
   },
 };
 
@@ -549,7 +610,7 @@ const FIRE_HISTORY_LEN = 16;
 
 // Cel-shaded fireball: flat colour bands (dark ember → orange → yellow → white-hot) built from
 // unioned circles along the ball's path history. One fill per band = smooth & cheap (no gradients).
-function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight) {
+function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight, isBlue = false) {
   const now = performance.now() * 0.001;
   const N = FIRE_HISTORY_LEN;
   const vx = motionVector?.vx || 0;
@@ -621,7 +682,9 @@ function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight) {
 
   const colors = isHit
     ? ['#fecaca', '#ffffff', '#ffffff', '#ffffff']
-    : ['#c2410c', '#f97316', '#fde047', '#fffbeb'];
+    : (isBlue
+        ? ['#0369a1', '#0ea5e9', '#67e8f9', '#f0fdfa']
+        : ['#c2410c', '#f97316', '#fde047', '#fffbeb']);
 
   const radiusAt = (p, scale) =>
     Math.max(0, radius * scale * (1.08 - 0.8 * p.t) * (1 + 0.09 * Math.sin(now * 12 + p.i * 1.7)));
@@ -645,8 +708,8 @@ function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight) {
   // Single soft heat glow under the head (dark theme only)
   if (!isLight && !isHit) {
     const glow = ctx.createRadialGradient(x, y, radius * 0.4, x, y, radius * 2.2);
-    glow.addColorStop(0, 'rgba(249, 115, 22, 0.28)');
-    glow.addColorStop(1, 'rgba(249, 115, 22, 0)');
+    glow.addColorStop(0, isBlue ? 'rgba(14, 165, 233, 0.32)' : 'rgba(249, 115, 22, 0.28)');
+    glow.addColorStop(1, isBlue ? 'rgba(14, 165, 233, 0)' : 'rgba(249, 115, 22, 0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(x, y, radius * 2.2, 0, Math.PI * 2);
@@ -705,6 +768,238 @@ function drawCelFireball(ctx, x, y, radius, motionVector, isHit, isLight) {
   ctx.restore();
 }
 
+// Burning status and hit animation for enemies burned by Fire Ball or Spit Fire Ball
+function drawBurningBallAnimation(ctx, ball, renderX, renderY) {
+  if (!ball.burnTicksLeft || ball.burnTicksLeft <= 0 || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.001;
+  const isBlue = !!ball.isBlueBurn;
+  const r = ball.radius;
+
+  ctx.save();
+
+  // 1. Heat Corona / Fire Aura around the ball
+  const auraGlow = ctx.createRadialGradient(renderX, renderY, r * 0.6, renderX, renderY, r * 1.55);
+  if (isBlue) {
+    auraGlow.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+    auraGlow.addColorStop(0.6, 'rgba(14, 165, 233, 0.22)');
+    auraGlow.addColorStop(1, 'rgba(2, 132, 199, 0)');
+  } else {
+    auraGlow.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
+    auraGlow.addColorStop(0.6, 'rgba(234, 88, 12, 0.22)');
+    auraGlow.addColorStop(1, 'rgba(194, 65, 12, 0)');
+  }
+  ctx.fillStyle = auraGlow;
+  ctx.beginPath();
+  ctx.arc(renderX, renderY, r * 1.55, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Animated Licking Flame Tongues dancing around the ball perimeter
+  const tongues = 9;
+  for (let i = 0; i < tongues; i++) {
+    // Distribute tongues mainly over top and sides
+    const baseAng = -Math.PI / 2 + ((i - (tongues - 1) / 2) * (Math.PI * 0.85)) / ((tongues - 1) / 2);
+    const flutter = Math.sin(now * 15 + i * 1.4) * 0.18;
+    const ang = baseAng + flutter;
+    const wave = 0.85 + 0.35 * Math.sin(now * 18 + i * 2.1);
+    const tongueLen = (r * 0.45 + 8) * wave;
+
+    const rootX = renderX + Math.cos(ang) * (r * 0.88);
+    const rootY = renderY + Math.sin(ang) * (r * 0.88);
+    // Flames always lick upwards against gravity
+    const tipX = renderX + Math.cos(ang) * (r * 0.88 + tongueLen) + Math.sin(now * 12 + i) * 3;
+    const tipY = renderY + Math.sin(ang) * (r * 0.88 + tongueLen) - (tongueLen * 0.4);
+
+    const perpX = -Math.sin(ang);
+    const perpY = Math.cos(ang);
+    const halfBase = 4.5 * wave;
+
+    // Outer flame band
+    ctx.beginPath();
+    ctx.moveTo(rootX - perpX * halfBase, rootY - perpY * halfBase);
+    ctx.quadraticCurveTo((rootX + tipX) * 0.5 - perpX * halfBase * 0.6, (rootY + tipY) * 0.5 - perpY * halfBase * 0.6, tipX, tipY);
+    ctx.quadraticCurveTo((rootX + tipX) * 0.5 + perpX * halfBase * 0.6, (rootY + tipY) * 0.5 + perpY * halfBase * 0.6, rootX + perpX * halfBase, rootY + perpY * halfBase);
+    ctx.closePath();
+    ctx.fillStyle = isBlue ? '#0284c7' : '#ea580c';
+    ctx.fill();
+
+    // Inner bright tongue
+    ctx.beginPath();
+    ctx.moveTo(rootX - perpX * (halfBase * 0.5), rootY - perpY * (halfBase * 0.5));
+    ctx.quadraticCurveTo((rootX + tipX) * 0.5, (rootY + tipY) * 0.5, tipX - Math.sin(now * 8) * 1, tipY + tongueLen * 0.3);
+    ctx.quadraticCurveTo((rootX + tipX) * 0.5, (rootY + tipY) * 0.5, rootX + perpX * (halfBase * 0.5), rootY + perpY * (halfBase * 0.5));
+    ctx.closePath();
+    ctx.fillStyle = isBlue ? '#67e8f9' : '#fde047';
+    ctx.fill();
+  }
+
+  // 3. Searing Burn Hit Flash / Flame Burst Animation when burn ticks damage
+  if ((ball.burnFlashTimer || 0) > 0) {
+    const flashProg = Math.max(0, ball.burnFlashTimer / 240); // 1.0 -> 0.0
+    const flashR = r * (1.1 + (1 - flashProg) * 0.65);
+    ctx.globalAlpha = flashProg;
+
+    // Fiery shockwave ring
+    ctx.strokeStyle = isBlue ? '#38bdf8' : '#f97316';
+    ctx.lineWidth = Math.max(1.5, 4 * flashProg);
+    ctx.beginPath();
+    ctx.arc(renderX, renderY, flashR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner searing flash flare
+    const flashGrad = ctx.createRadialGradient(renderX, renderY, 0, renderX, renderY, r * 0.9);
+    flashGrad.addColorStop(0, '#ffffff');
+    flashGrad.addColorStop(0.5, isBlue ? 'rgba(103, 232, 249, 0.85)' : 'rgba(254, 240, 138, 0.85)');
+    flashGrad.addColorStop(1, isBlue ? 'rgba(14, 165, 233, 0)' : 'rgba(249, 115, 22, 0)');
+    ctx.fillStyle = flashGrad;
+    ctx.beginPath();
+    ctx.arc(renderX, renderY, r * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Fiery impact cross-flare
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.6 * flashProg;
+    const flareLen = r * 1.3;
+    ctx.beginPath();
+    ctx.moveTo(renderX - flareLen, renderY);
+    ctx.lineTo(renderX + flareLen, renderY);
+    ctx.moveTo(renderX, renderY - flareLen);
+    ctx.lineTo(renderX + flareLen, renderY);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+// Tactical lock-on targeting reticle for enemy marked by Spit Fire Ball (active for 5 seconds)
+function drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight) {
+  if (!ball.spitFireTargetTimer || ball.spitFireTargetTimer <= 0 || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.001;
+  const r = ball.radius;
+
+  ctx.save();
+  ctx.translate(renderX, renderY);
+
+  // Rotating tactical cyan lock-on brackets
+  const rot = now * 1.6;
+  ctx.rotate(rot);
+
+  const bracketR = r + 11 + Math.sin(now * 8) * 1.5;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2.0;
+  ctx.shadowColor = '#38bdf8';
+  ctx.shadowBlur = 8;
+
+  // 4 tactical corner brackets
+  for (let b = 0; b < 4; b++) {
+    const bAng = (b * Math.PI) / 2;
+    ctx.save();
+    ctx.rotate(bAng);
+    ctx.beginPath();
+    ctx.arc(0, 0, bracketR, -0.28, 0.28);
+    ctx.stroke();
+
+    // Corner tick arrow pointing inward
+    ctx.beginPath();
+    ctx.moveTo(bracketR + 3, 0);
+    ctx.lineTo(bracketR - 2, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Counter-rotating inner diamond
+  ctx.rotate(-rot * 2);
+  const diaR = r * 0.55 + Math.sin(now * 10) * 1.5;
+  ctx.strokeStyle = '#67e8f9';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(diaR, 0);
+  ctx.lineTo(0, diaR);
+  ctx.lineTo(-diaR, 0);
+  ctx.lineTo(0, -diaR);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Reset rotation for countdown timer tag
+  ctx.rotate(rot);
+  ctx.shadowBlur = 0;
+
+  // Digital countdown tag: e.g. "2.4s"
+  const secLeft = (ball.spitFireTargetTimer / 1000).toFixed(1);
+  ctx.font = '700 9px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = isLight ? '#0284c7' : '#38bdf8';
+  ctx.fillText(`${secLeft}s`, 0, bracketR + 13);
+
+  ctx.restore();
+}
+
+// Render embedded combat daggers stuck in victim body
+function drawStuckDaggers(ctx, ball, renderX, renderY) {
+  if (!ball.stuckDaggers || ball.stuckDaggers.length === 0 || ball.isDead || ball.isDying) return;
+  ball.stuckDaggers.forEach(d => {
+    ctx.save();
+    ctx.translate(renderX, renderY);
+    ctx.rotate(d.relAngle);
+
+    const r = ball.radius;
+    ctx.translate(r - 2, 0);
+    ctx.rotate(Math.PI * 0.12);
+
+    // Embedded blade tip inside flesh
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(-6, -2, 6, 4);
+
+    // Bolster / guard
+    ctx.fillStyle = '#134e4a';
+    ctx.fillRect(0, -5, 4, 10);
+    ctx.strokeStyle = '#2dd4bf';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, -5, 4, 10);
+
+    // Protruding hilt
+    ctx.fillStyle = '#0f766e';
+    ctx.fillRect(4, -2.5, 12, 5);
+    ctx.fillStyle = '#2dd4bf';
+    ctx.fillRect(16, -3.5, 3, 7);
+
+    // Subtle countdown timer indicator beside hilt
+    if (d.timer > 0) {
+      const secLeft = (d.timer / 1000).toFixed(1);
+      ctx.font = '700 8px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#2dd4bf';
+      ctx.fillText(`${secLeft}s`, 22, -5);
+    }
+
+    ctx.restore();
+  });
+}
+
+// Render frost / sluggish slow aura around slowed ball
+function drawSlowEffect(ctx, ball, renderX, renderY) {
+  if (!ball.isSlowed || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.003;
+  const r = ball.radius + 6;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(renderX, renderY, r + Math.sin(now * 3) * 1.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.65)';
+  ctx.lineWidth = 2.0;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+
+  // Ice crystal droplets around periphery
+  for (let i = 0; i < 4; i++) {
+    const ang = now + (i * Math.PI) / 2;
+    const fx = renderX + Math.cos(ang) * (r + 3);
+    const fy = renderY + Math.sin(ang) * (r + 3);
+    ctx.beginPath();
+    ctx.arc(fx, fy, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#67e8f9';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 // 3D Sphere Renderer with accessories
 function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isHit = false, shield = 0, theme = 'dark', missingNotches = [], motionVector = null, extraData = null) {
   ctx.save();
@@ -739,47 +1034,52 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Rotating sword for Sword Ball
-  if (config.id === BALL_TYPES.SWORD) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rotationAngle);
+  // Rotating sword for Sword Ball & Dual Sword Ball (front and back swords)
+  if (config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD) {
+    const isDual = config.id === BALL_TYPES.DUAL_SWORD;
+    const angles = isDual ? [0, Math.PI] : [0];
 
-    const bladeLength = config.bladeLength || 54;
-    const bladeGrad = ctx.createLinearGradient(radius - 2, 0, radius + bladeLength, 0);
+    angles.forEach(offsetAng => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotationAngle + offsetAng);
 
-    if (isHit) {
-      if (isLight) {
-        bladeGrad.addColorStop(0, '#f87171');
-        bladeGrad.addColorStop(0.5, '#dc2626');
-        bladeGrad.addColorStop(1, '#b91c1c');
+      const bladeLength = config.bladeLength || 54;
+      const bladeGrad = ctx.createLinearGradient(radius - 2, 0, radius + bladeLength, 0);
+
+      if (isHit) {
+        if (isLight) {
+          bladeGrad.addColorStop(0, '#f87171');
+          bladeGrad.addColorStop(0.5, '#dc2626');
+          bladeGrad.addColorStop(1, '#b91c1c');
+        } else {
+          bladeGrad.addColorStop(0, '#ffffff');
+          bladeGrad.addColorStop(0.5, '#ffffff');
+          bladeGrad.addColorStop(1, '#ffffff');
+        }
       } else {
-        bladeGrad.addColorStop(0, '#ffffff');
-        bladeGrad.addColorStop(0.5, '#ffffff');
-        bladeGrad.addColorStop(1, '#ffffff');
+        bladeGrad.addColorStop(0, '#94a3b8');
+        bladeGrad.addColorStop(0.5, '#f8fafc');
+        bladeGrad.addColorStop(1, '#e2e8f0');
       }
-    } else {
-      bladeGrad.addColorStop(0, '#94a3b8');
-      bladeGrad.addColorStop(0.5, '#f8fafc');
-      bladeGrad.addColorStop(1, '#e2e8f0');
-    }
 
-    ctx.fillStyle = bladeGrad;
-    ctx.beginPath();
-    ctx.moveTo(radius - 2, -4);
-    ctx.lineTo(radius + bladeLength - 10, -3.5);
-    ctx.lineTo(radius + bladeLength, 0); // sharp tip
-    ctx.lineTo(radius + bladeLength - 10, 3.5);
-    ctx.lineTo(radius - 2, 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : (isLight ? '#475569' : '#e2e8f0');
-    ctx.lineWidth = isHit ? 1.6 : (isLight ? 0.9 : 1.2);
-    ctx.stroke();
+      ctx.fillStyle = bladeGrad;
+      ctx.beginPath();
+      ctx.moveTo(radius - 2, -4);
+      ctx.lineTo(radius + bladeLength - 10, -3.5);
+      ctx.lineTo(radius + bladeLength, 0); // sharp tip
+      ctx.lineTo(radius + bladeLength - 10, 3.5);
+      ctx.lineTo(radius - 2, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : (isLight ? '#475569' : '#e2e8f0');
+      ctx.lineWidth = isHit ? 1.6 : (isLight ? 0.9 : 1.2);
+      ctx.stroke();
 
-    ctx.fillStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : '#d97706';
-    ctx.fillRect(radius - 2, -7, 4, 14);
-    ctx.restore();
+      ctx.fillStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : '#d97706';
+      ctx.fillRect(radius - 2, -7, 4, 14);
+      ctx.restore();
+    });
   }
 
   // Rotating combat knife for Knife Ball (Short, fast, razor-sharp combat dagger)
@@ -835,6 +1135,76 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     ctx.moveTo(radius + 5, 0);
     ctx.lineTo(radius + knifeLength - 8, 0);
     ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Combat Dagger for Dagger Ball (aims and shoots dagger; empty sheath when thrown)
+  if (config.id === BALL_TYPES.DAGGER) {
+    const hasDagger = extraData?.hasDagger !== false;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotationAngle);
+
+    const daggerLen = config.daggerLength || 32;
+
+    // Compact sheath / mounting bracket on the ball body
+    ctx.fillStyle = isLight ? '#042f2e' : '#134e4a';
+    ctx.fillRect(radius - 3, -5, 5, 10);
+    ctx.strokeStyle = '#2dd4bf';
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(radius - 3, -5, 5, 10);
+
+    if (hasDagger) {
+      // Hilt guard & bolster
+      ctx.fillStyle = isHit ? '#f87171' : (isLight ? '#0f766e' : '#14b8a6');
+      ctx.fillRect(radius + 2, -5.5, 3.5, 11);
+
+      // Teal textured grip handle
+      ctx.fillStyle = isHit ? '#dc2626' : '#0f766e';
+      ctx.fillRect(radius + 5.5, -2.5, 7, 5);
+
+      // Pommel ring
+      ctx.fillStyle = '#2dd4bf';
+      ctx.fillRect(radius + 12.5, -3.2, 2.5, 6.4);
+
+      // Razor-sharp double-edged dagger blade
+      const bladeGrad = ctx.createLinearGradient(radius + 3, 0, radius + daggerLen, 0);
+      if (isHit) {
+        bladeGrad.addColorStop(0, '#ffffff');
+        bladeGrad.addColorStop(1, '#ef4444');
+      } else {
+        bladeGrad.addColorStop(0, '#94a3b8');
+        bladeGrad.addColorStop(0.5, '#f8fafc');
+        bladeGrad.addColorStop(1, '#cbd5e1');
+      }
+
+      ctx.fillStyle = bladeGrad;
+      ctx.beginPath();
+      ctx.moveTo(radius + 3, -3.0);
+      ctx.lineTo(radius + daggerLen - 6, -2.8);
+      ctx.lineTo(radius + daggerLen, 0); // razor sharp dagger tip
+      ctx.lineTo(radius + daggerLen - 6, 2.8);
+      ctx.lineTo(radius + 3, 3.0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = isHit ? '#ef4444' : (isLight ? '#334155' : '#e2e8f0');
+      ctx.lineWidth = isHit ? 1.4 : 1.0;
+      ctx.stroke();
+
+      // Cyan fuller groove in the center of the dagger
+      ctx.strokeStyle = '#2dd4bf';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(radius + 6, 0);
+      ctx.lineTo(radius + daggerLen - 8, 0);
+      ctx.stroke();
+    } else {
+      // Empty holster with subtle indicator glow
+      ctx.fillStyle = 'rgba(45, 212, 191, 0.3)';
+      ctx.fillRect(radius + 2, -2, 4, 4);
+    }
 
     ctx.restore();
   }
@@ -1193,8 +1563,8 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Fire Ball: Cel-shaded living flame that bends & curves along its real travel path
-  if (config.id === BALL_TYPES.FIRE) {
+  // Fire Ball & Spit Fire Ball: Cel-shaded living flame that bends & curves along its real travel path
+  if (config.id === BALL_TYPES.FIRE || config.id === BALL_TYPES.SPIT_FIRE) {
     drawCelFireball(
       ctx,
       x,
@@ -1202,7 +1572,8 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       radius,
       motionVector,
       isHit,
-      isLight
+      isLight,
+      config.id === BALL_TYPES.SPIT_FIRE
     );
   }
 
@@ -1210,8 +1581,8 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
 
-  if (config.id === BALL_TYPES.FIRE) {
-    // Fire Ball body is the cel-shaded flame itself (drawn above)
+  if (config.id === BALL_TYPES.FIRE || config.id === BALL_TYPES.SPIT_FIRE) {
+    // Fire Ball and Spit Fire Ball body is the cel-shaded flame itself (drawn above)
   } else if (isHit) {
     if (isLight) {
       // In Light Mode, flash a prominent crimson-red impact so it stays crisp against the light background
@@ -1909,10 +2280,11 @@ function BallThumbnailPreview({ config, theme }) {
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, 64, 64);
 
-    const isFire = config.id === BALL_TYPES.FIRE;
+    const isFire = config.id === BALL_TYPES.FIRE || config.id === BALL_TYPES.SPIT_FIRE;
     const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
     const previewY = isFire ? 44 : 32;
-    const rotation = config.id === BALL_TYPES.SWORD ? -0.4 : (config.id === BALL_TYPES.KNIFE ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (config.id === BALL_TYPES.FIRE ? 0.35 : 0)))));
+    const isSword = config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD;
+    const rotation = isSword ? -0.4 : ((config.id === BALL_TYPES.KNIFE || config.id === BALL_TYPES.DAGGER) ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (isFire ? 0.35 : 0)))));
     const diceState = config.id === BALL_TYPES.DICE ? { value: 1, isRolling: false, tier: 'low', popScale: 1.0 } : null;
     draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 }, diceState);
   }, [config, theme]);
@@ -1984,8 +2356,11 @@ function BallBattleGame() {
     brokenShards: [],
     flyingShards: [],
     flyingBullets: [],
+    flyingDaggers: [],
     thornTraps: [],
     shardBursts: [],
+    spitFireBursts: [],
+    flyingFlames: [],
     damageTexts: [],
     particles: [],
     confetti: [],
@@ -2094,8 +2469,11 @@ function BallBattleGame() {
     physicsRef.current.brokenShards = [];
     physicsRef.current.flyingShards = [];
     physicsRef.current.flyingBullets = [];
+    physicsRef.current.flyingDaggers = [];
     physicsRef.current.thornTraps = [];
     physicsRef.current.shardBursts = [];
+    physicsRef.current.spitFireBursts = [];
+    physicsRef.current.flyingFlames = [];
     physicsRef.current.damageTexts = [];
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
@@ -2148,6 +2526,8 @@ function BallBattleGame() {
         burnTimer: 0,
         burnSource: null,
         burnQueue: [],
+        isBlueBurn: false,
+        burnFlashTimer: 0,
         isDead: false,
         isDying: false,
         deathTimer: 0,
@@ -2161,12 +2541,22 @@ function BallBattleGame() {
         knifeAngle: b.angle || 0,
         knifeSpeed: 0.12,
         knifeHitFreezeTimer: 0,
+        daggerAngle: b.angle || 0,
+        daggerCooldown: 1000,
+        hasDagger: b.type === BALL_TYPES.DAGGER,
+        isWeaponless: false,
+        weaponlessTimer: 0,
+        weaponlessMaxTimer: 7000,
+        stuckDaggers: [],
+        isSlowed: false,
+        slowTimer: 0,
         spikeAngle: b.angle || 0,
         hammerAngle: b.angle,
         hammerSpeed: 0.055,
         hammerHitFreezeTimer: 0,
         shardAngle: b.angle || 0,
         shardTargetTimer: 0,
+        spitFireTargetTimer: 0,
         gunAngle: b.angle || 0,
         gunSpeed: 0.045,
         gunCooldown: 3000,
@@ -2184,6 +2574,7 @@ function BallBattleGame() {
         targetRadius: b.config?.radius || b.radius,
         targetMass: b.config?.mass || b.mass,
         growCooldown: 0,
+        flameGrowCooldown: 0,
         growDelayTimer: 0,
         hasTriggeredGrowFx: false,
         healTimer: 6000,
@@ -2197,7 +2588,7 @@ function BallBattleGame() {
         diceTier: 'low',
         dicePopScale: 1.0,
         missingNotches: [],
-        fireHistory: b.type === BALL_TYPES.FIRE ? Array.from({ length: 16 }, (_, idx) => ({
+        fireHistory: (b.type === BALL_TYPES.FIRE || b.type === BALL_TYPES.SPIT_FIRE) ? Array.from({ length: 16 }, (_, idx) => ({
           x: b.x - Math.cos(b.angle) * (idx * (b.radius * 0.22)),
           y: b.y - Math.sin(b.angle) * (idx * (b.radius * 0.22)),
         })) : [],
@@ -2212,8 +2603,11 @@ function BallBattleGame() {
       brokenShards: [],
       flyingShards: [],
       flyingBullets: [],
+      flyingDaggers: [],
       thornTraps: [],
       shardBursts: [],
+      spitFireBursts: [],
+      flyingFlames: [],
       damageTexts: [],
       particles: [],
       confetti: [],
@@ -2254,8 +2648,11 @@ function BallBattleGame() {
     physicsRef.current.brokenShards = [];
     physicsRef.current.flyingShards = [];
     physicsRef.current.flyingBullets = [];
+    physicsRef.current.flyingDaggers = [];
     physicsRef.current.thornTraps = [];
     physicsRef.current.shardBursts = [];
+    physicsRef.current.spitFireBursts = [];
+    physicsRef.current.flyingFlames = [];
     physicsRef.current.damageTexts = [];
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
@@ -2278,8 +2675,11 @@ function BallBattleGame() {
     physicsRef.current.brokenShards = [];
     physicsRef.current.flyingShards = [];
     physicsRef.current.flyingBullets = [];
+    physicsRef.current.flyingDaggers = [];
     physicsRef.current.thornTraps = [];
     physicsRef.current.shardBursts = [];
+    physicsRef.current.spitFireBursts = [];
+    physicsRef.current.flyingFlames = [];
     physicsRef.current.damageTexts = [];
     physicsRef.current.particles = [];
     physicsRef.current.confetti = [];
@@ -2516,33 +2916,38 @@ function BallBattleGame() {
       });
     };
 
-    const triggerGrowBallExpansion = (growBall) => {
+    const triggerGrowBallExpansion = (growBall, fromFlame = false) => {
       if (growBall.isDead || growBall.isDying) return;
-      if ((growBall.growCooldown || 0) > 0) return; // Only trigger ONCE per distinct collision impact
+      if (!fromFlame && (growBall.growCooldown || 0) > 0) return; // Only trigger ONCE per distinct collision impact
+      if (fromFlame && (growBall.flameGrowCooldown || 0) > 0) return;
 
-      const growth = growBall.config?.growthPerHit || 7.5;
-      const maxR = growBall.config?.maxRadius || 108;
-      const maxM = growBall.config?.maxMass || 6.0;
+      const growth = fromFlame
+        ? (growBall.config?.growthPerFlameHit || 3.2)
+        : (growBall.config?.growthPerHit || 7.5);
+      const maxR = growBall.config?.maxRadius || 136;
+      const maxM = growBall.config?.maxMass || 10.0;
       const baseR = growBall.config?.radius || 34;
       const baseM = growBall.config?.mass || 1.0;
 
       const currentTargetR = growBall.targetRadius || growBall.radius;
       if (currentTargetR < maxR) {
-        // Enforce once-per-hit cooldown
-        growBall.growCooldown = 0.55;
-        // Delay growth by ~280ms so size expands AFTER collision rebound separation,
-        // avoiding instant overlap/double-hit issues while enemy is still nearby
-        growBall.growDelayTimer = 0.28;
+        if (fromFlame) {
+          growBall.flameGrowCooldown = 0.12; // Rapid expansion as spit flames strike
+          growBall.growDelayTimer = 0; // Immediate growth on flame hit
+        } else {
+          growBall.growCooldown = 0.55;
+          growBall.growDelayTimer = 0.28;
+        }
         growBall.hasTriggeredGrowFx = false;
 
         const nextTargetR = Math.min(maxR, currentTargetR + growth);
         growBall.targetRadius = nextTargetR;
 
-        // Proportional mass scaling up to 6.0 max mass
+        // Proportional mass scaling up to 10.0 max mass
         const progress = Math.min(1, Math.max(0, (nextTargetR - baseR) / (maxR - baseR)));
         growBall.targetMass = Math.min(maxM, Math.round((baseM + progress * (maxM - baseM)) * 10) / 10);
 
-        sound.play('growing', 0.85);
+        sound.play('growing', fromFlame ? 0.65 : 0.85);
       }
     };
 
@@ -2565,8 +2970,36 @@ function BallBattleGame() {
       });
     };
 
+    const triggerSpitFireBurst = (attacker, target) => {
+      if (target.isDead || target.isDying) return;
+      // Inflict 5-second Flame Lock on the struck enemy
+      target.spitFireTargetTimer = 5000;
+
+      // Ensure active continuous burst exists for this attacker & target
+      const existing = physicsRef.current.spitFireBursts.find(
+        sb => sb.attackerId === attacker.id && sb.targetId === target.id
+      );
+      if (!existing) {
+        physicsRef.current.spitFireBursts.push({
+          attackerId: attacker.id,
+          targetId: target.id,
+          target: target,
+          attackerTeam: attacker.team,
+          originX: attacker.x,
+          originY: attacker.y,
+          timer: 0, // 1st flame launches immediately
+          interval: 140, // Continuous mini flame barrage every 140ms while Flame Lock is active
+          shotCount: 0,
+        });
+      }
+    };
+
     const applyDamage = (victim, amount, attacker, isCritical = false, isBurn = false) => {
       if (victim.isDead || victim.isDying) return;
+
+      if (isBurn) {
+        victim.burnFlashTimer = 220;
+      }
 
       if (victim.type === BALL_TYPES.STEEL) {
         victim.hitCount = (victim.hitCount || 0) + 1;
@@ -2600,6 +3033,10 @@ function BallBattleGame() {
       }
 
       let remainingDmg = amount;
+      // Slow debuff: Reduces Damage Dealt by 25%
+      if (attacker && attacker.isSlowed && !isBurn) {
+        remainingDmg = Math.max(1, Math.round(remainingDmg * 0.75));
+      }
       if (victim.shield > 0) {
         if (victim.shield >= remainingDmg) {
           victim.shield -= remainingDmg;
@@ -2659,6 +3096,22 @@ function BallBattleGame() {
         victim.vx *= 0.15;
         victim.vy *= 0.15;
         if (attacker) attacker.kills += 1;
+
+        // Auto-retrieve stuck daggers back to owners if victim dies
+        if (victim.stuckDaggers && victim.stuckDaggers.length > 0) {
+          sound.play('daggerPull', 0.9);
+          victim.stuckDaggers.forEach(d => {
+            const owner = physicsRef.current.balls.find(b => b.id === d.ownerId);
+            if (owner && !owner.isDead) {
+              owner.hasDagger = true;
+              owner.isWeaponless = false;
+              owner.weaponlessTimer = 0;
+              owner.daggerCooldown = 600;
+            }
+          });
+          victim.stuckDaggers = [];
+          victim.isSlowed = false;
+        }
       }
     };
 
@@ -2727,7 +3180,7 @@ function BallBattleGame() {
       const hasDyingBalls = balls.some(b => b.isDying);
 
       // Manage Fire Ball passive ambient burning sound loop
-      const hasLivingFireBall = activeBalls.some(b => b.type === BALL_TYPES.FIRE);
+      const hasLivingFireBall = activeBalls.some(b => b.type === BALL_TYPES.FIRE || b.type === BALL_TYPES.SPIT_FIRE);
       if (hasLivingFireBall && simState === 'playing') {
         sound.startLoop('fireballLoop', 0.65);
       } else {
@@ -2889,6 +3342,15 @@ function BallBattleGame() {
                   multiAngle: ang,
                   targetRadius: nextRadius,
                   targetMass: nextMass,
+                  hasDagger: false,
+                  daggerAngle: 0,
+                  daggerCooldown: 0,
+                  isWeaponless: false,
+                  weaponlessTimer: 0,
+                  weaponlessMaxTimer: 7000,
+                  stuckDaggers: [],
+                  isSlowed: false,
+                  slowTimer: 0,
                   teamColor: ball.teamColor,
                   teamName: ball.teamName,
                   totalDamageDealt: 0,
@@ -3028,9 +3490,10 @@ function BallBattleGame() {
           }
         }
 
-        // Fire Ball: Literal roaring fire streaming behind motion, dropping persistent burning ground trail
-        if (ball.type === BALL_TYPES.FIRE && !ball.isDead && !ball.isDying) {
+        // Fire Ball & Spit Fire Ball: Literal roaring fire streaming behind motion, dropping persistent burning ground trail
+        if ((ball.type === BALL_TYPES.FIRE || ball.type === BALL_TYPES.SPIT_FIRE) && !ball.isDead && !ball.isDying) {
           ball.fireAngle = (ball.fireAngle || 0) + safeDt * 3.6;
+          const isSpitFire = ball.type === BALL_TYPES.SPIT_FIRE;
 
           // Positional history: the flame body follows the real path so it bends & curves on bounces
           if (!ball.fireHistory) ball.fireHistory = [];
@@ -3072,6 +3535,7 @@ function BallBattleGame() {
               life: 1.0,
               decay: 0.024 + Math.random() * 0.012, // persists ~0.7-0.9s
               flicker: Math.random() * 20,
+              isBlue: isSpitFire,
             });
           }
 
@@ -3084,13 +3548,15 @@ function BallBattleGame() {
               vy: -1.2 - Math.random() * 1.8 - ball.vy * 0.15,
               life: 1.0,
               decay: 0.045 + Math.random() * 0.035,
-              color: Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.3 ? '#fef08a' : '#ea580c'),
+              color: isSpitFire
+                ? (Math.random() > 0.4 ? '#38bdf8' : (Math.random() > 0.3 ? '#67e8f9' : '#ffffff'))
+                : (Math.random() > 0.4 ? '#f97316' : (Math.random() > 0.3 ? '#fef08a' : '#ea580c')),
               size: Math.random() * 2.8 + 1.8,
             });
           }
         }
 
-        // Burning victim: Wisps of flame and charcoal smoke rising upward
+        // Burning victim: Wisps of flame rising upward
         if (ball.burnTicksLeft > 0 && !ball.isDead && !ball.isDying && Math.random() < 0.45) {
           particles.push({
             x: ball.x + (Math.random() - 0.5) * ball.radius * 0.85,
@@ -3099,7 +3565,9 @@ function BallBattleGame() {
             vy: -1.2 - Math.random() * 1.8,
             life: 1.0,
             decay: 0.05 + Math.random() * 0.03,
-            color: Math.random() > 0.4 ? '#f97316' : '#fde047',
+            color: ball.isBlueBurn
+              ? (Math.random() > 0.4 ? '#38bdf8' : '#67e8f9')
+              : (Math.random() > 0.4 ? '#f97316' : '#fde047'),
             size: Math.random() * 2.2 + 1.6,
           });
         }
@@ -3137,6 +3605,8 @@ function BallBattleGame() {
         if (ball.healFlashTimer > 0) ball.healFlashTimer = Math.max(0, ball.healFlashTimer - safeDt * 1000);
         if (ball.hitShakeTimer > 0) ball.hitShakeTimer = Math.max(0, ball.hitShakeTimer - safeDt * 1000);
         if (ball.invulnerableTimer > 0) ball.invulnerableTimer = Math.max(0, ball.invulnerableTimer - safeDt * 1000);
+        if (ball.burnFlashTimer > 0) ball.burnFlashTimer = Math.max(0, ball.burnFlashTimer - safeDt * 1000);
+        if (ball.spitFireTargetTimer > 0) ball.spitFireTargetTimer = Math.max(0, ball.spitFireTargetTimer - safeDt * 1000);
 
         // Process Bleed Side Effect (queue-based damage ticks)
         if (ball.bleedTicksLeft > 0 && !ball.isDead) {
@@ -3152,24 +3622,31 @@ function BallBattleGame() {
           }
         }
 
-        // Process Burn Side Effect (queue-based true fire damage ticks: -2, -2, -1, -1)
+        // Process Burn Side Effect (queue-based true fire damage ticks)
         if (ball.burnTicksLeft > 0 && !ball.isDead) {
           ball.burnTimer -= safeDt * 1000;
           if (ball.burnTimer <= 0) {
             ball.burnTicksLeft -= 1;
             ball.burnTimer = 480; // next tick delay
             const tickDmg = (ball.burnQueue && ball.burnQueue.length > 0) ? ball.burnQueue.shift() : 1;
+            ball.burnFlashTimer = 240;
             applyDamage(ball, tickDmg, ball.burnSource || ball, false, true);
 
             // Searing flame particle burst
-            spawnParticles(ball.x, ball.y, '#f97316', 7, 1.2);
-            spawnParticles(ball.x, ball.y, '#fde047', 4, 1.4);
-            spawnParticles(ball.x, ball.y, '#7c2d12', 3, 0.8);
+            if (ball.isBlueBurn) {
+              spawnParticles(ball.x, ball.y, '#38bdf8', 8, 1.4);
+              spawnParticles(ball.x, ball.y, '#67e8f9', 5, 1.6);
+              spawnParticles(ball.x, ball.y, '#ffffff', 4, 1.0);
+            } else {
+              spawnParticles(ball.x, ball.y, '#f97316', 7, 1.2);
+              spawnParticles(ball.x, ball.y, '#fde047', 4, 1.4);
+              spawnParticles(ball.x, ball.y, '#7c2d12', 3, 0.8);
+            }
             sound.play('fireballBurn', 0.85);
           }
         }
 
-        if (ball.type === BALL_TYPES.SWORD) {
+        if (ball.type === BALL_TYPES.SWORD || ball.type === BALL_TYPES.DUAL_SWORD) {
           if (ball.swordHitFreezeTimer > 0) {
             ball.swordHitFreezeTimer = Math.max(0, ball.swordHitFreezeTimer - safeDt * 1000);
           } else {
@@ -3329,7 +3806,7 @@ function BallBattleGame() {
             if (ball.sniperCooldown <= 0 && nearestEnemy) {
               // Trigger aim state & audio
               ball.sniperState = 'aiming';
-              ball.sniperAimTimer = ball.config?.aimDuration || 1200;
+              ball.sniperAimTimer = ball.config?.aimDuration || 1800;
               ball.vx = 0;
               ball.vy = 0;
               sound.play('sniperAimAndShoot', 0.95);
@@ -3345,6 +3822,9 @@ function BallBattleGame() {
         // Grow Ball: Cooldown management and smooth post-separation expansion
         if (ball.growCooldown > 0) {
           ball.growCooldown = Math.max(0, ball.growCooldown - safeDt);
+        }
+        if (ball.flameGrowCooldown > 0) {
+          ball.flameGrowCooldown = Math.max(0, ball.flameGrowCooldown - safeDt);
         }
         if (ball.growDelayTimer > 0) {
           ball.growDelayTimer = Math.max(0, ball.growDelayTimer - safeDt);
@@ -3367,11 +3847,119 @@ function BallBattleGame() {
           }
         }
 
+        // Dagger Ball: Single Dagger mechanics (aim, throw, 2s recall on miss, 7s recall on hit)
+        if (ball.type === BALL_TYPES.DAGGER && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          // Decrement weaponless reload timer if weaponless
+          if (ball.isWeaponless && ball.weaponlessTimer > 0) {
+            ball.weaponlessTimer = Math.max(0, ball.weaponlessTimer - safeDt * 1000);
+          }
+
+          const livingEnemies = balls.filter(b => b.team !== ball.team && !b.isDead && !b.isDying);
+          let nearestEnemy = null;
+          let nearestDist = Infinity;
+          livingEnemies.forEach(e => {
+            const d = Math.hypot(e.x - ball.x, e.y - ball.y);
+            if (d < nearestDist) {
+              nearestDist = d;
+              nearestEnemy = e;
+            }
+          });
+
+          if (ball.hasDagger && !ball.isWeaponless) {
+            if (nearestEnemy) {
+              const targetAngle = Math.atan2(nearestEnemy.y - ball.y, nearestEnemy.x - ball.x);
+              let diff = (targetAngle - (ball.daggerAngle || 0)) % (Math.PI * 2);
+              if (diff > Math.PI) diff -= Math.PI * 2;
+              if (diff < -Math.PI) diff += Math.PI * 2;
+              ball.daggerAngle = (ball.daggerAngle || 0) + diff * Math.min(1, safeDt * 5.5);
+            } else {
+              ball.daggerAngle = ((ball.daggerAngle || 0) + 0.02) % (Math.PI * 2);
+            }
+
+            ball.daggerCooldown = (ball.daggerCooldown !== undefined ? ball.daggerCooldown : 1000) - safeDt * 1000;
+            if (ball.daggerCooldown <= 0 && nearestEnemy) {
+              ball.hasDagger = false;
+              ball.isWeaponless = true;
+              ball.weaponlessTimer = 0; // Starts 7s countdown once it hits a target
+
+              const throwDist = ball.radius + 6;
+              const dx = ball.x + Math.cos(ball.daggerAngle) * throwDist;
+              const dy = ball.y + Math.sin(ball.daggerAngle) * throwDist;
+              const daggerSpeed = 13.5;
+
+              if (!physicsRef.current.flyingDaggers) physicsRef.current.flyingDaggers = [];
+              physicsRef.current.flyingDaggers.push({
+                id: Math.random(),
+                x: dx,
+                y: dy,
+                vx: Math.cos(ball.daggerAngle) * daggerSpeed,
+                vy: Math.sin(ball.daggerAngle) * daggerSpeed,
+                angle: ball.daggerAngle,
+                ownerId: ball.id,
+                ownerTeam: ball.team,
+                ownerBall: ball,
+                targetId: nearestEnemy.id,
+                damage: ball.config?.daggerDamage || 14,
+                life: 2.0, // 2 seconds forward flight before pulling back if it hits no one
+                state: 'flying', // 'flying' | 'returning'
+              });
+
+              sound.play('daggerThrow', 0.95);
+              spawnParticles(dx, dy, '#2dd4bf', 10, 2.0);
+              spawnParticles(dx, dy, '#e2e8f0', 6, 1.4);
+            }
+          } else {
+            // Weaponless: slowly idle turn until dagger is retrieved
+            ball.daggerAngle = ((ball.daggerAngle || 0) + 0.02) % (Math.PI * 2);
+          }
+        }
+
+        // Stuck Daggers on victim: 7 seconds timer, then pull out and return to Dagger Ball
+        if (ball.stuckDaggers && ball.stuckDaggers.length > 0 && !ball.isDead && !ball.isDying) {
+          for (let dIdx = ball.stuckDaggers.length - 1; dIdx >= 0; dIdx--) {
+            const d = ball.stuckDaggers[dIdx];
+            d.timer -= safeDt * 1000;
+            if (d.timer <= 0) {
+              // 7 seconds elapsed! Dagger pulls out from victim body!
+              sound.play('daggerPull', 0.95);
+              ball.stuckDaggers.splice(dIdx, 1);
+              if (ball.stuckDaggers.length === 0) {
+                ball.isSlowed = false;
+              }
+
+              // Deal +4 pull rip damage to the victim
+              const ownerBall = balls.find(b => b.id === d.ownerId);
+              applyDamage(ball, 4, ownerBall || ball, false);
+              spawnParticles(ball.x, ball.y, '#2dd4bf', 10, 1.8);
+              spawnParticles(ball.x, ball.y, '#ef4444', 8, 1.5);
+
+              // Spawn returning flying dagger zooming back to owner
+              if (!physicsRef.current.flyingDaggers) physicsRef.current.flyingDaggers = [];
+              physicsRef.current.flyingDaggers.push({
+                id: Math.random(),
+                x: ball.x,
+                y: ball.y,
+                vx: 0,
+                vy: 0,
+                angle: 0,
+                ownerId: d.ownerId,
+                ownerTeam: ownerBall ? ownerBall.team : ball.team,
+                ownerBall: ownerBall,
+                damage: 0,
+                life: 3.0,
+                state: 'returning',
+              });
+            }
+          }
+        }
+
         if (!isSoloWinner) {
           const curSpd = Math.hypot(ball.vx, ball.vy);
-          const targetSpd = ball.speed;
+          const baseSpd = ball.speed;
+          // Slow debuff: Reduces Movement Speed by 20%
+          const targetSpd = ball.isSlowed ? baseSpd * 0.8 : baseSpd;
           if (curSpd > 0.001) {
-            const lerpedSpd = curSpd + (targetSpd - curSpd) * 0.04;
+            const lerpedSpd = curSpd + (targetSpd - curSpd) * 0.06;
             ball.vx = (ball.vx / curSpd) * lerpedSpd;
             ball.vy = (ball.vy / curSpd) * lerpedSpd;
           }
@@ -3426,6 +4014,10 @@ function BallBattleGame() {
               sound.play('fireballHitWall', 0.9);
               spawnParticles(ball.x, ball.y, '#f97316', 5, 1.4);
               spawnParticles(ball.x, ball.y, '#fef08a', 3, 1.6);
+            } else if (ball.type === BALL_TYPES.SPIT_FIRE) {
+              sound.play('fireballHitWall', 0.9);
+              spawnParticles(ball.x, ball.y, '#38bdf8', 5, 1.4);
+              spawnParticles(ball.x, ball.y, '#67e8f9', 3, 1.6);
             } else {
               sound.play('wallBounce', 0.55);
               spawnParticles(ball.x, ball.y, '#ffffff', 2, 0.4);
@@ -3500,8 +4092,9 @@ function BallBattleGame() {
               const midY = (b1.y + b2.y) / 2;
               spawnParticles(midX, midY, '#f97316', 5, 0.9);
 
-              if (b1.type === BALL_TYPES.FIRE || b2.type === BALL_TYPES.FIRE) {
+              if (b1.type === BALL_TYPES.FIRE || b2.type === BALL_TYPES.FIRE || b1.type === BALL_TYPES.SPIT_FIRE || b2.type === BALL_TYPES.SPIT_FIRE) {
                 sound.play('fireballHit', 0.95);
+                const isBlueBlast = b1.type === BALL_TYPES.SPIT_FIRE || b2.type === BALL_TYPES.SPIT_FIRE;
 
                 // Fiery explosive impact shockwave animation
                 if (!physicsRef.current.fireImpacts) physicsRef.current.fireImpacts = [];
@@ -3513,6 +4106,7 @@ function BallBattleGame() {
                   life: 1.0,
                   decay: 0.04, // lasts ~350ms
                   rot: Math.random() * Math.PI * 2,
+                  isBlue: isBlueBlast,
                 });
 
                 // Shower of 28 high-velocity explosive molten sparks
@@ -3526,7 +4120,9 @@ function BallBattleGame() {
                     vy: Math.sin(pAng) * pSpd - 0.8,
                     life: 1.0,
                     decay: 0.035 + Math.random() * 0.03,
-                    color: p % 3 === 0 ? '#ffffff' : (p % 3 === 1 ? '#fef08a' : '#f97316'),
+                    color: isBlueBlast
+                      ? (p % 3 === 0 ? '#ffffff' : (p % 3 === 1 ? '#67e8f9' : '#0284c7'))
+                      : (p % 3 === 0 ? '#ffffff' : (p % 3 === 1 ? '#fef08a' : '#f97316')),
                     size: Math.random() * 3.5 + 2.0,
                   });
                 }
@@ -3617,22 +4213,58 @@ function BallBattleGame() {
               }
 
               // Fire Ball: Direct body collision ignites enemy with extended Burn (-4, -3, -2, -1, -1, -1)
-              if (b1.type === BALL_TYPES.FIRE && b1.team !== b2.team && b2.type !== BALL_TYPES.FIRE && !b2.isDead && !b2.isDying) {
+              // (Fire Ball & Spit Fire Ball are completely immune to Burn & Scorch)
+              if (b1.type === BALL_TYPES.FIRE && b1.team !== b2.team && b2.type !== BALL_TYPES.FIRE && b2.type !== BALL_TYPES.SPIT_FIRE && !b2.isDead && !b2.isDying) {
                 b2.burnTicksLeft = 6;
                 b2.burnTimer = 480;
                 b2.burnSource = b1;
+                b2.isBlueBurn = false;
+                b2.burnFlashTimer = 220;
                 b2.burnQueue = [4, 3, 2, 1, 1, 1];
                 spawnParticles(b2.x, b2.y, '#f97316', 10, 1.8);
                 spawnParticles(b2.x, b2.y, '#fef08a', 6, 2.0);
               }
 
-              if (b2.type === BALL_TYPES.FIRE && b2.team !== b1.team && b1.type !== BALL_TYPES.FIRE && !b1.isDead && !b1.isDying) {
+              if (b2.type === BALL_TYPES.FIRE && b2.team !== b1.team && b1.type !== BALL_TYPES.FIRE && b1.type !== BALL_TYPES.SPIT_FIRE && !b1.isDead && !b1.isDying) {
                 b1.burnTicksLeft = 6;
                 b1.burnTimer = 480;
                 b1.burnSource = b2;
+                b1.isBlueBurn = false;
+                b1.burnFlashTimer = 220;
                 b1.burnQueue = [4, 3, 2, 1, 1, 1];
                 spawnParticles(b1.x, b1.y, '#f97316', 10, 1.8);
                 spawnParticles(b1.x, b1.y, '#fef08a', 6, 2.0);
+              }
+
+              // Spit Fire Ball: Direct body collision locks enemy with Flame Lock for 5 seconds, ignites non-fire units with Scorch, and triggers mini flame barrage
+              if (b1.type === BALL_TYPES.SPIT_FIRE && b1.team !== b2.team && b2.type !== BALL_TYPES.SPIT_FIRE && !b2.isDead && !b2.isDying) {
+                b2.spitFireTargetTimer = 5000;
+                if (b2.type !== BALL_TYPES.FIRE) {
+                  b2.burnTicksLeft = 4;
+                  b2.burnTimer = 420;
+                  b2.burnSource = b1;
+                  b2.isBlueBurn = true;
+                  b2.burnFlashTimer = 220;
+                  b2.burnQueue = [2, 1, 1, 1];
+                }
+                spawnParticles(b2.x, b2.y, '#38bdf8', 10, 1.8);
+                spawnParticles(b2.x, b2.y, '#67e8f9', 6, 2.0);
+                triggerSpitFireBurst(b1, b2);
+              }
+
+              if (b2.type === BALL_TYPES.SPIT_FIRE && b2.team !== b1.team && b1.type !== BALL_TYPES.SPIT_FIRE && !b1.isDead && !b1.isDying) {
+                b1.spitFireTargetTimer = 5000;
+                if (b1.type !== BALL_TYPES.FIRE) {
+                  b1.burnTicksLeft = 4;
+                  b1.burnTimer = 420;
+                  b1.burnSource = b2;
+                  b1.isBlueBurn = true;
+                  b1.burnFlashTimer = 220;
+                  b1.burnQueue = [2, 1, 1, 1];
+                }
+                spawnParticles(b1.x, b1.y, '#38bdf8', 10, 1.8);
+                spawnParticles(b1.x, b1.y, '#67e8f9', 6, 2.0);
+                triggerSpitFireBurst(b2, b1);
               }
 
               // Dice Ball: Roll random damage on enemy collision based on roll sound pitch
@@ -3733,10 +4365,10 @@ function BallBattleGame() {
             }
           }
 
-          if (b1.type === BALL_TYPES.SWORD && b1.team !== b2.team && !b2.isDead) {
+          if ((b1.type === BALL_TYPES.SWORD || b1.type === BALL_TYPES.DUAL_SWORD) && b1.team !== b2.team && !b2.isDead) {
             checkSwordHit(b1, b2);
           }
-          if (b2.type === BALL_TYPES.SWORD && b2.team !== b1.team && !b1.isDead) {
+          if ((b2.type === BALL_TYPES.SWORD || b2.type === BALL_TYPES.DUAL_SWORD) && b2.team !== b1.team && !b1.isDead) {
             checkSwordHit(b2, b1);
           }
 
@@ -3752,6 +4384,39 @@ function BallBattleGame() {
           }
           if (b2.type === BALL_TYPES.HAMMER && b2.team !== b1.team && !b1.isDead) {
             checkHammerHit(b2, b1);
+          }
+
+          // Dagger Ball: Body collision rips the dagger back out of the victim early
+          const checkDaggerRetrieval = (daggerOwner, victim) => {
+            if (daggerOwner.type === BALL_TYPES.DAGGER && victim.stuckDaggers && victim.stuckDaggers.length > 0) {
+              const myStuckIdx = victim.stuckDaggers.findIndex(d => d.ownerId === daggerOwner.id);
+              if (myStuckIdx !== -1) {
+                victim.stuckDaggers.splice(myStuckIdx, 1);
+                if (victim.stuckDaggers.length === 0) {
+                  victim.isSlowed = false;
+                }
+                daggerOwner.hasDagger = true;
+                daggerOwner.isWeaponless = false;
+                daggerOwner.weaponlessTimer = 0;
+                daggerOwner.daggerCooldown = 600;
+
+                // Deal +6 bonus retrieval damage on rip out
+                applyDamage(victim, 6, daggerOwner, true);
+
+                sound.play('daggerPull', 0.95);
+                spawnDamageText(victim.x, victim.y, 6, true, false, false);
+                spawnParticles(victim.x, victim.y, '#2dd4bf', 12, 2.2);
+                spawnParticles(victim.x, victim.y, '#ef4444', 10, 1.8);
+                spawnParticles(daggerOwner.x, daggerOwner.y, '#2dd4bf', 8, 1.5);
+              }
+            }
+          };
+
+          if (b1.type === BALL_TYPES.DAGGER && b1.team !== b2.team && !b2.isDead) {
+            checkDaggerRetrieval(b1, b2);
+          }
+          if (b2.type === BALL_TYPES.DAGGER && b2.team !== b1.team && !b1.isDead) {
+            checkDaggerRetrieval(b2, b1);
           }
         }
       }
@@ -3845,6 +4510,168 @@ function BallBattleGame() {
         }
       }
 
+      // Update Spit Fire barrage bursts (continues shooting while Flame Lock is active)
+      const { spitFireBursts, flyingFlames } = physicsRef.current;
+      if (spitFireBursts && spitFireBursts.length > 0) {
+        for (let i = spitFireBursts.length - 1; i >= 0; i--) {
+          const sb = spitFireBursts[i];
+          const target = sb.target;
+          const attacker = balls.find(b => b.id === sb.attackerId) || null;
+
+          // Halt continuous shooting if target is dead, Flame Lock expired, or attacker is dead
+          if (!target || target.isDead || target.isDying || !target.spitFireTargetTimer || target.spitFireTargetTimer <= 0 || !attacker || attacker.isDead || attacker.isDying) {
+            spitFireBursts.splice(i, 1);
+            continue;
+          }
+
+          sb.timer -= safeDt * 1000;
+          if (sb.timer <= 0) {
+            sb.timer = sb.interval;
+            sb.shotCount = (sb.shotCount || 0) + 1;
+
+            const startX = attacker.x;
+            const startY = attacker.y;
+
+            // Firing trajectory curving towards target with alternating left/right lanes
+            const dx = target.x - startX;
+            const dy = target.y - startY;
+            const dist = Math.hypot(dx, dy) || 1;
+            // Strictly alternate left (-1) and right (+1)
+            const side = (sb.shotCount % 2 === 0 ? 1 : -1);
+            // Dynamic arc bulge width: 65px to 105px lateral offset
+            const arcWidth = 65 + Math.random() * 40;
+            // Flight duration scaled with distance (~0.42s to 0.82s)
+            const duration = Math.max(0.42, Math.min(0.82, dist / 420));
+
+            flyingFlames.push({
+              x: startX,
+              y: startY,
+              startX: startX,
+              startY: startY,
+              targetId: sb.targetId,
+              target: target,
+              attackerTeam: sb.attackerTeam,
+              attacker: attacker,
+              damage: 1,
+              life: 3.5,
+              side: side,
+              arcWidth: arcWidth,
+              progress: 0,
+              duration: duration,
+              vx: 0,
+              vy: 0,
+              trail: [],
+            });
+
+            // SFX: flame shot sound!
+            sound.play('flameShot', 0.85);
+
+            // Azure launch flame particles
+            spawnParticles(startX, startY, '#38bdf8', 6, 1.2);
+            spawnParticles(startX, startY, '#67e8f9', 3, 1.4);
+          }
+        }
+      }
+
+      // Update Flying Mini Flames (curving outward and bending inward to locked target)
+      if (flyingFlames && flyingFlames.length > 0) {
+        for (let i = flyingFlames.length - 1; i >= 0; i--) {
+          const ff = flyingFlames[i];
+          ff.life -= safeDt;
+
+          const target = ff.target;
+          const targetAlive = target && !target.isDead && !target.isDying;
+
+          if (targetAlive) {
+            ff.progress = Math.min(1.0, ff.progress + safeDt / ff.duration);
+            const t = ff.progress;
+
+            const p0x = ff.startX;
+            const p0y = ff.startY;
+            const p2x = target.x;
+            const p2y = target.y;
+
+            const cdx = p2x - p0x;
+            const cdy = p2y - p0y;
+            const cDist = Math.hypot(cdx, cdy) || 1;
+
+            // Unit perpendicular vector towards chosen side
+            const nx = (-cdy / cDist) * ff.side;
+            const ny = (cdx / cDist) * ff.side;
+
+            // Lateral bulge scaled with distance so near-range doesn't clip
+            const actualBulge = Math.min(cDist * 0.65, ff.arcWidth);
+
+            // Control point P1 placed laterally outward at midpoint to form outward bulge
+            const mx = (p0x + p2x) * 0.5;
+            const my = (p0y + p2y) * 0.5;
+            const p1x = mx + nx * (actualBulge * 2.0);
+            const p1y = my + ny * (actualBulge * 2.0);
+
+            // Quadratic Bézier curve position: B(t) = (1-t)^2*P0 + 2*(1-t)*t*P1 + t^2*P2
+            const u = 1 - t;
+            const nextX = u * u * p0x + 2 * u * t * p1x + t * t * p2x;
+            const nextY = u * u * p0y + 2 * u * t * p1y + t * t * p2y;
+
+            // Tangent direction for flame rotation and trailing
+            const tanX = 2 * u * (p1x - p0x) + 2 * t * (p2x - p1x);
+            const tanY = 2 * u * (p1y - p0y) + 2 * t * (p2y - p1y);
+            const tanLen = Math.hypot(tanX, tanY) || 1;
+            const spd = 8.5;
+            ff.vx = (tanX / tanLen) * spd;
+            ff.vy = (tanY / tanLen) * spd;
+
+            ff.x = nextX;
+            ff.y = nextY;
+
+            // Record trail point for curved comet flame rendering
+            if (!ff.trail) ff.trail = [];
+            ff.trail.unshift({ x: ff.x, y: ff.y });
+            if (ff.trail.length > 16) ff.trail.length = 16;
+
+            const targetDist = Math.hypot(target.x - ff.x, target.y - ff.y);
+            if (t >= 0.98 || targetDist < target.radius + 6) {
+              // Mini Flame hits the locked enemy!
+              applyDamage(target, 1, ff.attacker || target, false);
+
+              // Grow Ball: Triggers growth expansion from Spit Fire hit!
+              if (target.type === BALL_TYPES.GROW && !target.isDead && !target.isDying) {
+                triggerGrowBallExpansion(target, true);
+              }
+              
+              // Inflict Scorch (Fire Ball & Spit Fire Ball are immune to Burn & Scorch)
+              if (target.type !== BALL_TYPES.FIRE && target.type !== BALL_TYPES.SPIT_FIRE) {
+                target.burnTicksLeft = Math.max(target.burnTicksLeft || 0, 3);
+                target.burnTimer = 420;
+                target.isBlueBurn = true;
+                target.burnSource = ff.attacker || target;
+                target.burnQueue = [1, 1, 1];
+                target.burnFlashTimer = 220;
+              }
+
+              sound.play('fireballBurn', 0.85);
+              spawnParticles(ff.x, ff.y, '#38bdf8', 7, 1.5);
+              spawnParticles(ff.x, ff.y, '#67e8f9', 4, 1.8);
+              spawnParticles(ff.x, ff.y, '#ffffff', 3, 1.0);
+              flyingFlames.splice(i, 1);
+              continue;
+            }
+          } else {
+            // Target is dead or missing: fly straight along current tangent until expired
+            ff.x += ff.vx;
+            ff.y += ff.vy;
+            if (!ff.trail) ff.trail = [];
+            ff.trail.unshift({ x: ff.x, y: ff.y });
+            if (ff.trail.length > 16) ff.trail.length = 16;
+          }
+
+          if (ff.life <= 0 || ff.x < 0 || ff.x > CANVAS_SIZE || ff.y < 0 || ff.y > CANVAS_SIZE) {
+            spawnParticles(ff.x, ff.y, '#38bdf8', 4, 0.8);
+            flyingFlames.splice(i, 1);
+          }
+        }
+      }
+
       // Update Flying Bullets from Gun Ball
       const { flyingBullets } = physicsRef.current;
       if (flyingBullets && flyingBullets.length > 0) {
@@ -3901,6 +4728,158 @@ function BallBattleGame() {
 
           if (fb.life <= 0) {
             flyingBullets.splice(i, 1);
+          }
+        }
+      }
+
+      // Update Flying Daggers thrown by Dagger Ball
+      const { flyingDaggers } = physicsRef.current;
+      if (flyingDaggers && flyingDaggers.length > 0) {
+        for (let i = flyingDaggers.length - 1; i >= 0; i--) {
+          const fd = flyingDaggers[i];
+          const owner = balls.find(b => b.id === fd.ownerId) || fd.ownerBall;
+
+          if (fd.state === 'returning') {
+            // Homing return flight pulling back to Dagger Ball
+            if (owner && !owner.isDead) {
+              const dx = owner.x - fd.x;
+              const dy = owner.y - fd.y;
+              const dist = Math.hypot(dx, dy);
+
+              if (dist <= owner.radius + 14) {
+                // Caught and pulled back into holster!
+                sound.play('daggerPull', 0.85);
+                owner.hasDagger = true;
+                owner.isWeaponless = false;
+                owner.weaponlessTimer = 0;
+                owner.daggerCooldown = 600;
+                spawnParticles(owner.x, owner.y, '#2dd4bf', 10, 1.8);
+                flyingDaggers.splice(i, 1);
+                continue;
+              }
+
+              const retSpd = 16.5;
+              fd.vx = (dx / dist) * retSpd;
+              fd.vy = (dy / dist) * retSpd;
+              fd.x += fd.vx;
+              fd.y += fd.vy;
+              fd.angle = Math.atan2(dy, dx);
+            } else {
+              flyingDaggers.splice(i, 1);
+              continue;
+            }
+          } else if (fd.state === 'stuck_wall') {
+            // Embedded in arena wall: stays there until retrieved or 2s timer pulls it back
+            fd.wallTimer = (fd.wallTimer !== undefined ? fd.wallTimer : 2000) - safeDt * 1000;
+
+            // Early retrieval if Dagger Ball physically touches the stuck wall dagger
+            if (owner && !owner.isDead) {
+              const dist = Math.hypot(owner.x - fd.x, owner.y - fd.y);
+              if (dist <= owner.radius + 14) {
+                sound.play('daggerPull', 0.9);
+                owner.hasDagger = true;
+                owner.isWeaponless = false;
+                owner.weaponlessTimer = 0;
+                owner.daggerCooldown = 600;
+                spawnParticles(fd.x, fd.y, '#2dd4bf', 10, 1.8);
+                flyingDaggers.splice(i, 1);
+                continue;
+              }
+            }
+
+            // After 2 seconds in the wall, Dagger Pull calls the dagger back
+            if (fd.wallTimer <= 0) {
+              sound.play('daggerPull', 0.95);
+              spawnParticles(fd.x, fd.y, '#2dd4bf', 6, 1.4);
+              fd.state = 'returning';
+            }
+            continue;
+          } else {
+            // Forward flight
+            fd.life -= safeDt;
+            fd.x += fd.vx;
+            fd.y += fd.vy;
+            fd.angle = Math.atan2(fd.vy, fd.vx);
+
+            // Thrown dagger does NOT bounce: sticks firmly into arena wall when hit
+            const minW = 12;
+            const maxW = CANVAS_SIZE - 12;
+            if (fd.x <= minW || fd.x >= maxW || fd.y <= minW || fd.y >= maxW) {
+              fd.x = Math.max(minW, Math.min(maxW, fd.x));
+              fd.y = Math.max(minW, Math.min(maxW, fd.y));
+              fd.vx = 0;
+              fd.vy = 0;
+              fd.state = 'stuck_wall';
+              fd.wallTimer = 2000;
+              sound.play('daggerHit', 0.9);
+              spawnParticles(fd.x, fd.y, '#2dd4bf', 8, 1.6);
+              spawnParticles(fd.x, fd.y, '#e2e8f0', 5, 1.2);
+              continue;
+            }
+
+            // Check enemy collision
+            let hitEnemy = false;
+            for (let bIdx = 0; bIdx < activeBalls.length; bIdx++) {
+              const enemy = activeBalls[bIdx];
+              if (enemy.team !== fd.ownerTeam && !enemy.isDead && !enemy.isDying) {
+                const dist = Math.hypot(enemy.x - fd.x, enemy.y - fd.y);
+                if (dist < enemy.radius + 12) {
+                  // Combat dagger embeds into the victim!
+                  sound.play('daggerHit', 0.95);
+
+                  // Inflict 14 projectile damage
+                  applyDamage(enemy, fd.damage, owner || enemy, true);
+
+                  // Inflict Bleed: 4 ticks of 1 damage
+                  enemy.bleedTicksLeft = 4;
+                  enemy.bleedTimer = 500;
+                  enemy.bleedSource = owner || enemy;
+                  if (!enemy.bleedQueue) enemy.bleedQueue = [];
+                  enemy.bleedQueue.push(1, 1, 1, 1);
+
+                  // Inflict Slow (-20% SPD, -25% DMG dealt) as long as dagger is stuck
+                  enemy.isSlowed = true;
+                  // Instantaneous speed clamp to 80%
+                  enemy.vx *= 0.8;
+                  enemy.vy *= 0.8;
+
+                  if (!enemy.stuckDaggers) enemy.stuckDaggers = [];
+                  const relAngle = Math.atan2(fd.y - enemy.y, fd.x - enemy.x);
+                  enemy.stuckDaggers.push({
+                    ownerId: fd.ownerId,
+                    relAngle: relAngle,
+                    damage: fd.damage,
+                    timer: 7000,
+                    maxTimer: 7000,
+                  });
+
+                  // Dagger Ball is now weaponless for 7 seconds
+                  if (owner) {
+                    owner.isWeaponless = true;
+                    owner.hasDagger = false;
+                    owner.weaponlessTimer = 7000;
+                    owner.weaponlessMaxTimer = 7000;
+                  }
+
+                  spawnParticles(fd.x, fd.y, '#ef4444', 10, 1.8);
+                  spawnParticles(fd.x, fd.y, '#2dd4bf', 8, 1.5);
+                  spawnParticles(fd.x, fd.y, '#ffffff', 5, 1.0);
+
+                  flyingDaggers.splice(i, 1);
+                  hitEnemy = true;
+                  break;
+                }
+              }
+            }
+
+            if (hitEnemy) continue;
+
+            // Missed everyone after 2 seconds: pulls back to owner!
+            if (fd.life <= 0) {
+              sound.play('daggerPull', 0.95);
+              spawnParticles(fd.x, fd.y, '#2dd4bf', 6, 1.4);
+              fd.state = 'returning';
+            }
           }
         }
       }
@@ -3972,14 +4951,15 @@ function BallBattleGame() {
 
               const dist = distToSegment(ball.x, ball.y, trap.x, trap.y, tipX, tipY);
               if (dist < ball.radius + (trap.widthRadius || 16)) {
-                // Fire Ball incinerates and completely destroys the Thorn Trap on contact!
-                if (ball.type === BALL_TYPES.FIRE) {
+                // Fire Ball & Spit Fire Ball incinerate and completely destroy the Thorn Trap on contact!
+                if (ball.type === BALL_TYPES.FIRE || ball.type === BALL_TYPES.SPIT_FIRE) {
                   sound.play('fireballBurn', 0.95);
+                  const isBlueTrap = ball.type === BALL_TYPES.SPIT_FIRE;
                   const hitMidX = (trap.x + tipX) / 2;
                   const hitMidY = (trap.y + tipY) / 2;
                   // Explosive incineration sparks & burnt charcoal ash
-                  spawnParticles(hitMidX, hitMidY, '#f97316', 16, 2.0);
-                  spawnParticles(hitMidX, hitMidY, '#fef08a', 8, 2.2);
+                  spawnParticles(hitMidX, hitMidY, isBlueTrap ? '#38bdf8' : '#f97316', 16, 2.0);
+                  spawnParticles(hitMidX, hitMidY, isBlueTrap ? '#67e8f9' : '#fef08a', 8, 2.2);
                   spawnParticles(hitMidX, hitMidY, '#7c2d12', 8, 1.4); // burnt charcoal ash
                   spawnParticles(hitMidX, hitMidY, '#15803d', 6, 1.2); // scorched leaves
 
@@ -3993,6 +4973,7 @@ function BallBattleGame() {
                     life: 0.9,
                     decay: 0.045,
                     rot: Math.random() * Math.PI * 2,
+                    isBlue: isBlueTrap,
                   });
 
                   // Destroy and remove the thorn trap from the arena
@@ -4031,34 +5012,41 @@ function BallBattleGame() {
     };
 
     const checkSwordHit = (attacker, victim) => {
-      const bladeLen = attacker.config?.bladeLength || BALL_CONFIGS[BALL_TYPES.SWORD].bladeLength;
-      const bladeX = attacker.x + Math.cos(attacker.swordAngle) * bladeLen;
-      const bladeY = attacker.y + Math.sin(attacker.swordAngle) * bladeLen;
+      const isDual = attacker.type === BALL_TYPES.DUAL_SWORD;
+      const bladeLen = attacker.config?.bladeLength || (isDual ? 50 : 54);
+      const angles = isDual ? [attacker.swordAngle, attacker.swordAngle + Math.PI] : [attacker.swordAngle];
 
-      const d = Math.hypot(victim.x - bladeX, victim.y - bladeY);
-      if (d < victim.radius + 10 && victim.invulnerableTimer <= 0) {
-        // Blade hitbox deals high damage (22 DMG)
-        const bladeDmg = attacker.config?.bladeDamage || 22;
-        applyDamage(victim, bladeDmg, attacker, true);
-        victim.invulnerableTimer = 220;
+      for (let i = 0; i < angles.length; i++) {
+        const curAng = angles[i];
+        const bladeX = attacker.x + Math.cos(curAng) * bladeLen;
+        const bladeY = attacker.y + Math.sin(curAng) * bladeLen;
 
-        const isArmored = victim.hasArmor || victim.config?.hasArmor || victim.type === BALL_TYPES.STONE || victim.type === BALL_TYPES.SPIKE;
-        if (isArmored) {
-          sound.play('swordHitToArmor', 0.9);
-        } else {
-          sound.play('swordHit', 0.9);
+        const d = Math.hypot(victim.x - bladeX, victim.y - bladeY);
+        if (d < victim.radius + 10 && victim.invulnerableTimer <= 0) {
+          // Blade hitbox deals high damage (18 DMG for Dual Sword, 22 DMG for Sword)
+          const bladeDmg = attacker.config?.bladeDamage || (isDual ? 18 : 22);
+          applyDamage(victim, bladeDmg, attacker, true);
+          victim.invulnerableTimer = 220;
+
+          const isArmored = victim.hasArmor || victim.config?.hasArmor || victim.type === BALL_TYPES.STONE || victim.type === BALL_TYPES.SPIKE;
+          if (isArmored) {
+            sound.play('swordHitToArmor', 0.9);
+          } else {
+            sound.play('swordHit', 0.9);
+          }
+
+          // Stopping animation: freeze sword spin for 100ms
+          attacker.swordHitFreezeTimer = 100;
+          
+          // Reverse sword spin direction
+          attacker.swordSpeed = -attacker.swordSpeed;
+
+          const pushAng = curAng;
+          victim.vx += Math.cos(pushAng) * 4.2;
+          victim.vy += Math.sin(pushAng) * 4.2;
+          spawnParticles(bladeX, bladeY, '#38bdf8', 8, 1.6);
+          break; // Hit processed for this frame
         }
-
-        // Stopping animation: freeze sword spin for 100ms
-        attacker.swordHitFreezeTimer = 100;
-        
-        // Reverse sword spin direction
-        attacker.swordSpeed = -attacker.swordSpeed;
-
-        const pushAng = attacker.swordAngle;
-        victim.vx += Math.cos(pushAng) * 4.2;
-        victim.vy += Math.sin(pushAng) * 4.2;
-        spawnParticles(bladeX, bladeY, '#38bdf8', 8, 1.6);
       }
     };
 
@@ -4233,18 +5221,18 @@ function BallBattleGame() {
           const r = ft.radius * (0.45 + 0.55 * alpha) * flick;
           ctx.save();
           ctx.globalAlpha = alpha * 0.85;
-          ctx.fillStyle = '#c2410c';
+          ctx.fillStyle = ft.isBlue ? '#0369a1' : '#c2410c';
           ctx.beginPath();
           ctx.arc(ft.x, ft.y, r, 0, Math.PI * 2);
           ctx.fill();
           if (alpha > 0.35) {
-            ctx.fillStyle = '#f97316';
+            ctx.fillStyle = ft.isBlue ? '#0ea5e9' : '#f97316';
             ctx.beginPath();
             ctx.arc(ft.x, ft.y - r * 0.15, r * 0.62, 0, Math.PI * 2);
             ctx.fill();
           }
           if (alpha > 0.65) {
-            ctx.fillStyle = '#fde047';
+            ctx.fillStyle = ft.isBlue ? '#67e8f9' : '#fde047';
             ctx.beginPath();
             ctx.arc(ft.x, ft.y - r * 0.25, r * 0.3, 0, Math.PI * 2);
             ctx.fill();
@@ -4339,6 +5327,72 @@ function BallBattleGame() {
         });
       }
 
+      // Render active homing mini celestial blue flames from Spit Fire Ball
+      if (simState !== 'planning' && physicsRef.current.flyingFlames) {
+        const now = performance.now() * 0.001;
+        physicsRef.current.flyingFlames.forEach(ff => {
+          ctx.save();
+
+          // Render curving fire tail trail
+          if (ff.trail && ff.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(ff.x, ff.y);
+            for (let t = 0; t < ff.trail.length; t++) {
+              ctx.lineTo(ff.trail[t].x, ff.trail[t].y);
+            }
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+            ctx.lineWidth = 3.2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            for (let t = 0; t < ff.trail.length - 1; t++) {
+              const pt = ff.trail[t];
+              const tAlpha = (1 - t / ff.trail.length) * 0.75;
+              const tRadius = Math.max(1, 4.4 * (1 - t / ff.trail.length));
+              ctx.beginPath();
+              ctx.arc(pt.x, pt.y, tRadius, 0, Math.PI * 2);
+              ctx.fillStyle = t % 2 === 0 ? `rgba(56, 189, 248, ${tAlpha})` : `rgba(103, 232, 249, ${tAlpha})`;
+              ctx.fill();
+            }
+          }
+
+          ctx.translate(ff.x, ff.y);
+          ctx.rotate(Math.atan2(ff.vy, ff.vx));
+
+          // Outer celestial blue glow
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 12;
+
+          // Mini cel flame teardrop
+          const flameLen = 10 + 2 * Math.sin(now * 16);
+          const flameW = 5 + Math.sin(now * 12);
+
+          // Outer blue band
+          ctx.beginPath();
+          ctx.moveTo(flameLen * 0.6, 0);
+          ctx.quadraticCurveTo(0, -flameW, -flameLen * 0.5, 0);
+          ctx.quadraticCurveTo(0, flameW, flameLen * 0.6, 0);
+          ctx.fillStyle = '#0284c7';
+          ctx.fill();
+
+          // Mid cyan band
+          ctx.beginPath();
+          ctx.moveTo(flameLen * 0.45, 0);
+          ctx.quadraticCurveTo(0, -flameW * 0.65, -flameLen * 0.35, 0);
+          ctx.quadraticCurveTo(0, flameW * 0.65, flameLen * 0.45, 0);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fill();
+
+          // Inner white-hot ice core
+          ctx.beginPath();
+          ctx.ellipse(flameLen * 0.15, 0, flameLen * 0.25, flameW * 0.35, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#f0fdfa';
+          ctx.fill();
+
+          ctx.restore();
+        });
+      }
+
       // Render heavy flying bullets from Gun Ball & Sniper Ball
       if (simState !== 'planning' && physicsRef.current.flyingBullets) {
         physicsRef.current.flyingBullets.forEach(fb => {
@@ -4426,6 +5480,53 @@ function BallBattleGame() {
             ctx.arc(2, 0, 1.5, 0, Math.PI * 2);
             ctx.fill();
           }
+
+          ctx.restore();
+        });
+      }
+
+      // Render flying combat daggers thrown by Dagger Ball
+      if (simState !== 'planning' && physicsRef.current.flyingDaggers) {
+        physicsRef.current.flyingDaggers.forEach(fd => {
+          ctx.save();
+          ctx.translate(fd.x, fd.y);
+          ctx.rotate(fd.angle || Math.atan2(fd.vy, fd.vx));
+
+          // Motion streak behind dagger (only while flying or returning)
+          if (fd.state !== 'stuck_wall') {
+            const streakGrad = ctx.createLinearGradient(-26, 0, 0, 0);
+            streakGrad.addColorStop(0, 'rgba(45, 212, 191, 0)');
+            streakGrad.addColorStop(0.5, 'rgba(45, 212, 191, 0.4)');
+            streakGrad.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
+            ctx.strokeStyle = streakGrad;
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.moveTo(-26, 0);
+            ctx.lineTo(0, 0);
+            ctx.stroke();
+          }
+
+          // Dagger blade
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath();
+          ctx.moveTo(14, 0); // sharp tip
+          ctx.lineTo(2, -3.2);
+          ctx.lineTo(-6, -3.0);
+          ctx.lineTo(-6, 3.0);
+          ctx.lineTo(2, 3.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#2dd4bf';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Guard & hilt
+          ctx.fillStyle = '#0f766e';
+          ctx.fillRect(-7, -4.5, 3, 9);
+          ctx.fillStyle = '#134e4a';
+          ctx.fillRect(-14, -2.2, 7, 4.4);
+          ctx.fillStyle = '#2dd4bf';
+          ctx.fillRect(-16, -3, 2, 6);
 
           ctx.restore();
         });
@@ -4553,10 +5654,11 @@ function BallBattleGame() {
 
         let currentRot = ball.angle || 0;
         if (simState !== 'planning') {
-          if (ball.type === BALL_TYPES.FIRE) currentRot = ball.fireAngle || 0;
+          if (ball.type === BALL_TYPES.FIRE || ball.type === BALL_TYPES.SPIT_FIRE) currentRot = ball.fireAngle || 0;
           else if (ball.type === BALL_TYPES.SPIKE) currentRot = ball.spikeAngle || 0;
           else if (ball.type === BALL_TYPES.HAMMER) currentRot = ball.hammerAngle || 0;
           else if (ball.type === BALL_TYPES.KNIFE) currentRot = ball.knifeAngle || 0;
+          else if (ball.type === BALL_TYPES.DAGGER) currentRot = ball.daggerAngle || 0;
           else if (ball.type === BALL_TYPES.SHARD) currentRot = ball.shardAngle || 0;
           else if (ball.type === BALL_TYPES.GUN) currentRot = ball.gunAngle || 0;
           else if (ball.type === BALL_TYPES.SNIPER) currentRot = ball.sniperAngle || 0;
@@ -4587,6 +5689,10 @@ function BallBattleGame() {
           popScale: ball.dicePopScale || 1.0,
         } : null;
 
+        const ballExtraData = ball.type === BALL_TYPES.DICE
+          ? diceState
+          : (ball.type === BALL_TYPES.DAGGER ? { hasDagger: ball.hasDagger && !ball.isWeaponless } : null);
+
         draw3DBall(
           ctx,
           renderX,
@@ -4600,8 +5706,16 @@ function BallBattleGame() {
           theme,
           ball.missingNotches || [],
           motionVec,
-          diceState
+          ballExtraData
         );
+
+        // Burning status, hit animation, and Spit Fire 3s Target Reticle
+        if (simState !== 'planning') {
+          drawBurningBallAnimation(ctx, ball, renderX, renderY);
+          drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight);
+          drawSlowEffect(ctx, ball, renderX, renderY);
+          drawStuckDaggers(ctx, ball, renderX, renderY);
+        }
 
         if (simState === 'planning') {
           const arrowLen = ball.radius + 24;
@@ -4822,6 +5936,38 @@ function BallBattleGame() {
             ctx.strokeRect(barX, sniperBarY, barWidth, sniperBarH);
           }
 
+          // Dagger Ball: 7-second weaponless reload timer / recall indicator below HP bar
+          if (ball.type === BALL_TYPES.DAGGER) {
+            const daggerBarH = 2.5;
+            const daggerBarY = barY + barHeight + 2;
+            const isWeaponless = !!ball.isWeaponless;
+            const totalTimer = ball.weaponlessMaxTimer || 7000;
+            const timer = ball.weaponlessTimer !== undefined ? ball.weaponlessTimer : 0;
+            const isStuckOnVictim = isWeaponless && timer > 0;
+            const progress = isStuckOnVictim
+              ? Math.min(1, Math.max(0, 1 - timer / totalTimer))
+              : (isWeaponless ? 0.35 : 1.0);
+
+            ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
+            ctx.fillRect(barX, daggerBarY, barWidth, daggerBarH);
+
+            ctx.fillStyle = isWeaponless ? '#2dd4bf' : '#14b8a6';
+            ctx.fillRect(barX, daggerBarY, barWidth * progress, daggerBarH);
+
+            ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(barX, daggerBarY, barWidth, daggerBarH);
+
+            // Digital timer countdown label right below reload bar when weaponless
+            if (isStuckOnVictim) {
+              const secLeft = (timer / 1000).toFixed(1);
+              ctx.font = '700 8px "JetBrains Mono", monospace';
+              ctx.textAlign = 'center';
+              ctx.fillStyle = isLight ? '#0f766e' : '#2dd4bf';
+              ctx.fillText(`${secLeft}s`, barX + barWidth / 2, daggerBarY + daggerBarH + 7);
+            }
+          }
+
           ctx.restore();
         }
       });
@@ -4844,26 +5990,28 @@ function BallBattleGame() {
           const alpha = Math.max(0, fi.life);
           ctx.globalAlpha = Math.min(1.0, alpha);
 
+          const isBlueBlast = !!fi.isBlue;
+
           // 1. Searing blast flash at epicenter
           const flashGrad = ctx.createRadialGradient(fi.x, fi.y, 0, fi.x, fi.y, fi.radius * 0.65);
           flashGrad.addColorStop(0, '#ffffff');
-          flashGrad.addColorStop(0.35, 'rgba(254, 240, 138, 0.9)');
-          flashGrad.addColorStop(0.7, 'rgba(249, 115, 22, 0.55)');
-          flashGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+          flashGrad.addColorStop(0.35, isBlueBlast ? 'rgba(103, 232, 249, 0.9)' : 'rgba(254, 240, 138, 0.9)');
+          flashGrad.addColorStop(0.7, isBlueBlast ? 'rgba(14, 165, 233, 0.55)' : 'rgba(249, 115, 22, 0.55)');
+          flashGrad.addColorStop(1, isBlueBlast ? 'rgba(2, 132, 199, 0)' : 'rgba(220, 38, 38, 0)');
           ctx.fillStyle = flashGrad;
           ctx.beginPath();
           ctx.arc(fi.x, fi.y, fi.radius * 0.65, 0, Math.PI * 2);
           ctx.fill();
 
           // 2. Expanding fiery shockwave ring
-          ctx.strokeStyle = `rgba(249, 115, 22, ${alpha * 0.85})`;
+          ctx.strokeStyle = isBlueBlast ? `rgba(14, 165, 233, ${alpha * 0.85})` : `rgba(249, 115, 22, ${alpha * 0.85})`;
           ctx.lineWidth = Math.max(2, 6 * alpha);
           ctx.beginPath();
           ctx.arc(fi.x, fi.y, fi.radius, 0, Math.PI * 2);
           ctx.stroke();
 
-          // 3. Inner golden heat ring
-          ctx.strokeStyle = `rgba(254, 240, 138, ${alpha})`;
+          // 3. Inner golden / cyan heat ring
+          ctx.strokeStyle = isBlueBlast ? `rgba(103, 232, 249, ${alpha})` : `rgba(254, 240, 138, ${alpha})`;
           ctx.lineWidth = Math.max(1, 2.5 * alpha);
           ctx.beginPath();
           ctx.arc(fi.x, fi.y, fi.radius * 0.85, 0, Math.PI * 2);
@@ -4877,7 +6025,9 @@ function BallBattleGame() {
             ctx.beginPath();
             ctx.moveTo(fi.x + Math.cos(rAng) * (fi.radius * 0.6), fi.y + Math.sin(rAng) * (fi.radius * 0.6));
             ctx.lineTo(fi.x + Math.cos(rAng) * rLen, fi.y + Math.sin(rAng) * rLen);
-            ctx.strokeStyle = r % 2 === 0 ? `rgba(254, 240, 138, ${alpha})` : `rgba(249, 115, 22, ${alpha})`;
+            ctx.strokeStyle = isBlueBlast
+              ? (r % 2 === 0 ? `rgba(103, 232, 249, ${alpha})` : `rgba(14, 165, 233, ${alpha})`)
+              : (r % 2 === 0 ? `rgba(254, 240, 138, ${alpha})` : `rgba(249, 115, 22, ${alpha})`);
             ctx.lineWidth = Math.max(1.5, 3.5 * alpha);
             ctx.stroke();
           }
@@ -5096,6 +6246,70 @@ function BallBattleGame() {
                           Locked by an enemy Shard Ball, targeted by a barrage of <strong>6 consecutive homing shards</strong> dealing <strong>1 damage</strong> each.
                         </td>
                       </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-flame-lock"
+                            onMouseEnter={(e) => showTooltip(e, 'FLAME_LOCK')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <SpitFireTargetIcon size={13} color="#38bdf8" /> FLAME LOCK
+                          </span>
+                        </td>
+                        <td className="col-source">Spit Fire Ball Strike</td>
+                        <td className="col-description">
+                          Locked by an enemy Spit Fire Ball for <strong>5 seconds</strong>, targeted by a continuous curving barrage of homing mini blue flames dealing <strong>1 damage</strong> each and inflicting Scorch as long as Flame Lock remains active.
+                        </td>
+                      </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-scorch"
+                            onMouseEnter={(e) => showTooltip(e, 'SCORCH')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <BurnIcon size={13} color="#38bdf8" /> SCORCH
+                          </span>
+                        </td>
+                        <td className="col-source">Spit Fire Ball / Mini Flames</td>
+                        <td className="col-description">
+                          Searing celestial blue fire damage ticks dealing true fire damage over an extended duration. Unlike puncture bleed, Scorch bypasses armor bleed immunity.
+                        </td>
+                      </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-dagger-hit"
+                            onMouseEnter={(e) => showTooltip(e, 'DAGGER_HIT')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <DaggerIcon size={13} color="#2dd4bf" /> DAGGER HIT
+                          </span>
+                        </td>
+                        <td className="col-source">Dagger Ball Embedded Blade</td>
+                        <td className="col-description">
+                          Inflicted when struck by a thrown combat dagger. Target is hampered by the embedded blade, reducing Movement Speed by <strong>20%</strong> and Damage Dealt by <strong>25%</strong> until the dagger is extracted.
+                        </td>
+                      </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-dagger-pull"
+                            onMouseEnter={(e) => showTooltip(e, 'DAGGER_PULL')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <DaggerIcon size={13} color="#38bdf8" /> DAGGER PULL
+                          </span>
+                        </td>
+                        <td className="col-source">Dagger Ball Recall Ability</td>
+                        <td className="col-description">
+                          Inflict (Self) that calls the thrown combat dagger back to Dagger Ball. Rips out embedded daggers from enemies dealing bonus damage, or retrieves them from arena walls, re-arming Dagger Ball upon return.
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -5226,7 +6440,7 @@ function BallBattleGame() {
                         </td>
                         <td className="col-source">Grow Ball Trait</td>
                         <td className="col-description">
-                          Every time it collides with an enemy ball, it absorbs impact energy and physically expands in size and mass (<strong>up to 6.0 max mass</strong>), gaining the <strong>Heavy Effect</strong> once reaching 2.8+ mass.
+                          Every time it collides with an enemy ball or absorbs spit fire hits, it absorbs impact energy and physically expands in size and mass (<strong>up to 10.0 max mass</strong>), gaining the <strong>Heavy Effect</strong> once reaching 2.8+ mass.
                         </td>
                       </tr>
 
@@ -5243,6 +6457,22 @@ function BallBattleGame() {
                         <td className="col-source">Shard Ball Trait</td>
                         <td className="col-description">
                           Upon hitting an enemy, locks onto the target and shoots <strong>6 consecutive homing crystal shards</strong> dealing <strong>1 damage</strong> per shard.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-incineration"
+                            onMouseEnter={(e) => showTooltip(e, 'INCINERATION')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <SpitFireIcon size={13} color="#38bdf8" /> INCINERATION
+                          </span>
+                        </td>
+                        <td className="col-source">Spit Fire Ball Innate Trait</td>
+                        <td className="col-description">
+                          Self-imbued mythical celestial blue flame aura. Leaves an azure ground trail, incinerates enemy Thorn Traps on contact, and inflicts Scorch and Flame Lock (<strong>5 seconds</strong>) while unleashing curving mini blue flame barrages.
                         </td>
                       </tr>
                     </tbody>
@@ -5277,9 +6507,9 @@ function BallBattleGame() {
                             <BladeIcon size={13} color="#dc2626" /> BLADE
                           </span>
                         </td>
-                        <td className="col-source">Sword Ball Accessory</td>
+                        <td className="col-source">Sword Ball / Dual Sword Ball Accessory</td>
                         <td className="col-description">
-                          Spinning sword blade deals a lethal <strong>22 damage</strong> on contact (versus 6 body bump damage), triggers a 100ms hit-stop animation, and reverses spin direction.
+                          Spinning sword blade deals <strong>22 blade damage</strong> (Sword Ball) or <strong>18 blade damage</strong> across twin front & back blades (Dual Sword Ball), triggers a 100ms hit-stop animation, and reverses spin direction on strike.
                         </td>
                       </tr>
 
@@ -5392,6 +6622,22 @@ function BallBattleGame() {
                         <td className="col-source">Fire Ball Ability</td>
                         <td className="col-description">
                           Striking an enemy ignites them with <strong>Burn (-2, -2, -1, -1)</strong>, dealing 4 consecutive ticks of true fire damage. Unlike puncture bleed, Burn bypasses armor bleed immunity.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-dagger"
+                            onMouseEnter={(e) => showTooltip(e, 'DAGGER')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <DaggerIcon size={13} color="#2dd4bf" /> DAGGER
+                          </span>
+                        </td>
+                        <td className="col-source">Dagger Ball Weapon</td>
+                        <td className="col-description">
+                          Aims and hurls a combat dagger dealing <strong>14 projectile damage</strong> and inflicting Bleed and Slow (-20% SPD, -25% DMG). Colliding body-to-body with the embedded victim rips the dagger back, dealing <strong>+6 retrieval damage</strong> and re-arming the shooter.
                         </td>
                       </tr>
                     </tbody>
@@ -5557,7 +6803,17 @@ function BallBattleGame() {
                       </span>
                     </div>
                     <div className="ball-stat-sub">
-                      <span>{ball.baseHp} HP</span> · <span>{ball.damage} DMG</span> · <span>{ball.speed} SPD</span>
+                      <span>{ball.baseHp} HP</span>
+                      <span className="ball-stat-dot">·</span>
+                      <span>{ball.damage} DMG</span>
+                      {getWeaponDamage(ball) !== null && (
+                        <>
+                          <span className="ball-stat-dot">·</span>
+                          <span className="ball-stat-wpn">{getWeaponDamage(ball)} WPN</span>
+                        </>
+                      )}
+                      <span className="ball-stat-dot">·</span>
+                      <span>{ball.speed} SPD</span>
                     </div>
                   </div>
                 </div>
@@ -5812,7 +7068,7 @@ function BallBattleGame() {
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming'
-                                      ? 'AIMING...'
+                                      ? `AIMING ${(((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1800) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
@@ -5820,11 +7076,38 @@ function BallBattleGame() {
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
-                                        ? '100%'
+                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1800)) * 100))}%`
                                         : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',
                                       boxShadow: '0 0 6px rgba(56, 189, 248, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dagger Ball 7-Second Dagger Pull Bar */}
+                            {b.type === BALL_TYPES.DAGGER && (
+                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Throws dagger inflicting Dagger Hit and Bleed; Dagger Pull calls it back">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#2dd4bf' }}>DAGGER PULL</span>
+                                  <span className="hud-charge-numeric" style={{ color: '#2dd4bf' }}>
+                                    {b.isWeaponless
+                                      ? (b.weaponlessTimer > 0 ? `${(b.weaponlessTimer / 1000).toFixed(1)}s / 7.0s` : 'CALLING')
+                                      : 'READY'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(45, 212, 191, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.isWeaponless
+                                        ? (b.weaponlessTimer > 0 ? `${Math.min(100, Math.max(0, (1 - b.weaponlessTimer / 7000) * 100))}%` : '50%')
+                                        : '100%',
+                                      height: '100%',
+                                      backgroundColor: '#2dd4bf',
+                                      boxShadow: '0 0 6px rgba(45, 212, 191, 0.7)',
                                       transition: 'width 0.05s linear',
                                     }}
                                   />
@@ -5845,11 +7128,11 @@ function BallBattleGame() {
                               )}
                               {b.burnTicksLeft > 0 && (
                                 <span
-                                  className="hud-effect-badge burn-active"
-                                  onMouseEnter={(e) => showTooltip(e, 'BURN')}
+                                  className={`hud-effect-badge ${b.isBlueBurn ? 'blue-burn-active' : 'burn-active'}`}
+                                  onMouseEnter={(e) => showTooltip(e, b.isBlueBurn ? 'SCORCH' : 'BURN')}
                                   onMouseLeave={hideTooltip}
                                 >
-                                  <BurnIcon size={13} color="#f97316" /> BURN
+                                  <BurnIcon size={13} color={b.isBlueBurn ? '#38bdf8' : '#f97316'} /> {b.isBlueBurn ? 'SCORCH' : 'BURN'}
                                 </span>
                               )}
                               {b.shardTargetTimer > 0 && !b.isDead && (
@@ -5861,6 +7144,24 @@ function BallBattleGame() {
                                   <ShardTargetIcon size={13} color="#c084fc" /> SHARD TARGET
                                 </span>
                               )}
+                              {b.spitFireTargetTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge spitfire-target-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'FLAME_LOCK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SpitFireTargetIcon size={13} color="#38bdf8" /> FLAME LOCK ({(b.spitFireTargetTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.isSlowed && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge slow-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SLOW')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SlowIcon size={13} color="#06b6d4" /> SLOW
+                                </span>
+                              )}
                               {b.shield > 0 && (
                                 <span
                                   className="hud-effect-badge shield-active"
@@ -5870,7 +7171,7 @@ function BallBattleGame() {
                                   <ShieldIcon size={13} color="#0284c7" /> SHIELD
                                 </span>
                               )}
-                              {b.type === BALL_TYPES.SWORD && (
+                              {(b.type === BALL_TYPES.SWORD || b.type === BALL_TYPES.DUAL_SWORD) && (
                                 <span
                                   className="hud-effect-badge blade-active"
                                   onMouseEnter={(e) => showTooltip(e, 'BLADE')}
@@ -5886,6 +7187,24 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <KnifeIcon size={13} color="#94a3b8" /> KNIFE
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.DAGGER && !b.isWeaponless && (
+                                <span
+                                  className="hud-effect-badge dagger-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#2dd4bf" /> DAGGER
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.DAGGER && b.isWeaponless && (
+                                <span
+                                  className="hud-effect-badge dagger-pull-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_PULL')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#38bdf8" /> DAGGER PULL
                                 </span>
                               )}
                               {b.type === BALL_TYPES.HAMMER && (
@@ -6043,6 +7362,15 @@ function BallBattleGame() {
                                   <FlameIcon size={13} color="#f97316" /> FLAMING
                                 </span>
                               )}
+                              {b.type === BALL_TYPES.SPIT_FIRE && (
+                                <span
+                                  className="hud-effect-badge spitfire-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'INCINERATION')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SpitFireIcon size={13} color="#38bdf8" /> INCINERATION
+                                </span>
+                              )}
                               {b.type === BALL_TYPES.HEAL && (
                                 <span
                                   className="hud-effect-badge heal-active"
@@ -6061,12 +7389,24 @@ function BallBattleGame() {
                                   <DiceIcon size={13} color="#f59e0b" /> LUCKY ROLL
                                 </span>
                               )}
+                              {b.stuckDaggers && b.stuckDaggers.length > 0 && (
+                                <span
+                                  className="hud-effect-badge dagger-hit-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_HIT')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#2dd4bf" /> DAGGER HIT
+                                </span>
+                              )}
                             </div>
 
                             {/* In 1v1 mode, render stats below the statuses */}
                             {showStats && !isTeamMatch && (
                               <div className="hud-bottom-stats-row">
                                 <span className="hud-stat-pill">DMG: <strong>{b.damage}</strong></span>
+                                {getWeaponDamage(b) !== null && (
+                                  <span className="hud-stat-pill">WPN: <strong>{getWeaponDamage(b)}</strong></span>
+                                )}
                                 <span className="hud-stat-pill">SPD: <strong>{typeof b.speed === 'number' ? Number(b.speed.toFixed(1)) : b.speed}</strong></span>
                                 <span className="hud-stat-pill">MASS: <strong>{typeof b.mass === 'number' ? Number(b.mass.toFixed(1)) : b.mass}</strong></span>
                               </div>
@@ -6080,6 +7420,12 @@ function BallBattleGame() {
                                 <span className="hud-side-stat-lbl">DMG</span>
                                 <span className="hud-side-stat-val">{b.damage}</span>
                               </div>
+                              {getWeaponDamage(b) !== null && (
+                                <div className="hud-side-stat-item">
+                                  <span className="hud-side-stat-lbl">WPN</span>
+                                  <span className="hud-side-stat-val">{getWeaponDamage(b)}</span>
+                                </div>
+                              )}
                               <div className="hud-side-stat-item">
                                 <span className="hud-side-stat-lbl">SPD</span>
                                 <span className="hud-side-stat-val">{typeof b.speed === 'number' ? Number(b.speed.toFixed(1)) : b.speed}</span>
@@ -6338,7 +7684,7 @@ function BallBattleGame() {
                                   </span>
                                   <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
                                     {b.sniperState === 'aiming'
-                                      ? 'AIMING...'
+                                      ? `AIMING ${(((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1800) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
@@ -6346,11 +7692,38 @@ function BallBattleGame() {
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
-                                        ? '100%'
+                                        ? `${Math.min(100, Math.max(0, (((b.config?.aimDuration || 1800) - Math.max(0, b.sniperAimTimer || 0)) / (b.config?.aimDuration || 1800)) * 100))}%`
                                         : `${Math.min(100, Math.max(0, ((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 4000) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.sniperState === 'aiming' ? '#38bdf8' : '#0284c7',
                                       boxShadow: '0 0 6px rgba(56, 189, 248, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Dagger Ball 7-Second Dagger Pull Bar */}
+                            {b.type === BALL_TYPES.DAGGER && (
+                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Throws dagger inflicting Dagger Hit and Bleed; Dagger Pull calls it back">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt" style={{ color: '#2dd4bf' }}>DAGGER PULL</span>
+                                  <span className="hud-charge-numeric" style={{ color: '#2dd4bf' }}>
+                                    {b.isWeaponless
+                                      ? (b.weaponlessTimer > 0 ? `${(b.weaponlessTimer / 1000).toFixed(1)}s / 7.0s` : 'CALLING')
+                                      : 'READY'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(45, 212, 191, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.isWeaponless
+                                        ? (b.weaponlessTimer > 0 ? `${Math.min(100, Math.max(0, (1 - b.weaponlessTimer / 7000) * 100))}%` : '50%')
+                                        : '100%',
+                                      height: '100%',
+                                      backgroundColor: '#2dd4bf',
+                                      boxShadow: '0 0 6px rgba(45, 212, 191, 0.7)',
                                       transition: 'width 0.05s linear',
                                     }}
                                   />
@@ -6371,11 +7744,11 @@ function BallBattleGame() {
                               )}
                               {b.burnTicksLeft > 0 && (
                                 <span
-                                  className="hud-effect-badge burn-active"
-                                  onMouseEnter={(e) => showTooltip(e, 'BURN')}
+                                  className={`hud-effect-badge ${b.isBlueBurn ? 'blue-burn-active' : 'burn-active'}`}
+                                  onMouseEnter={(e) => showTooltip(e, b.isBlueBurn ? 'SCORCH' : 'BURN')}
                                   onMouseLeave={hideTooltip}
                                 >
-                                  <BurnIcon size={13} color="#f97316" /> BURN
+                                  <BurnIcon size={13} color={b.isBlueBurn ? '#38bdf8' : '#f97316'} /> {b.isBlueBurn ? 'SCORCH' : 'BURN'}
                                 </span>
                               )}
                               {b.shardTargetTimer > 0 && !b.isDead && (
@@ -6387,6 +7760,24 @@ function BallBattleGame() {
                                   <ShardTargetIcon size={13} color="#c084fc" /> SHARD TARGET
                                 </span>
                               )}
+                              {b.spitFireTargetTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge spitfire-target-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'FLAME_LOCK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SpitFireTargetIcon size={13} color="#38bdf8" /> FLAME LOCK ({(b.spitFireTargetTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.isSlowed && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge slow-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'SLOW')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SlowIcon size={13} color="#06b6d4" /> SLOW
+                                </span>
+                              )}
                               {b.shield > 0 && (
                                 <span
                                   className="hud-effect-badge shield-active"
@@ -6396,7 +7787,7 @@ function BallBattleGame() {
                                   <ShieldIcon size={13} color="#0284c7" /> SHIELD
                                 </span>
                               )}
-                              {b.type === BALL_TYPES.SWORD && (
+                              {(b.type === BALL_TYPES.SWORD || b.type === BALL_TYPES.DUAL_SWORD) && (
                                 <span
                                   className="hud-effect-badge blade-active"
                                   onMouseEnter={(e) => showTooltip(e, 'BLADE')}
@@ -6412,6 +7803,24 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <KnifeIcon size={13} color="#94a3b8" /> KNIFE
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.DAGGER && !b.isWeaponless && (
+                                <span
+                                  className="hud-effect-badge dagger-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#2dd4bf" /> DAGGER
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.DAGGER && b.isWeaponless && (
+                                <span
+                                  className="hud-effect-badge dagger-pull-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_PULL')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#38bdf8" /> DAGGER PULL
                                 </span>
                               )}
                               {b.type === BALL_TYPES.HAMMER && (
@@ -6569,6 +7978,15 @@ function BallBattleGame() {
                                   <FlameIcon size={13} color="#f97316" /> FLAMING
                                 </span>
                               )}
+                              {b.type === BALL_TYPES.SPIT_FIRE && (
+                                <span
+                                  className="hud-effect-badge spitfire-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'INCINERATION')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <SpitFireIcon size={13} color="#38bdf8" /> INCINERATION
+                                </span>
+                              )}
                               {b.type === BALL_TYPES.HEAL && (
                                 <span
                                   className="hud-effect-badge heal-active"
@@ -6587,12 +8005,24 @@ function BallBattleGame() {
                                   <DiceIcon size={13} color="#f59e0b" /> LUCKY ROLL
                                 </span>
                               )}
+                              {b.stuckDaggers && b.stuckDaggers.length > 0 && (
+                                <span
+                                  className="hud-effect-badge dagger-hit-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_HIT')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#2dd4bf" /> DAGGER HIT
+                                </span>
+                              )}
                             </div>
 
                             {/* In 1v1 mode, render stats below the statuses */}
                             {showStats && !isTeamMatch && (
                               <div className="hud-bottom-stats-row">
                                 <span className="hud-stat-pill">DMG: <strong>{b.damage}</strong></span>
+                                {getWeaponDamage(b) !== null && (
+                                  <span className="hud-stat-pill">WPN: <strong>{getWeaponDamage(b)}</strong></span>
+                                )}
                                 <span className="hud-stat-pill">SPD: <strong>{typeof b.speed === 'number' ? Number(b.speed.toFixed(1)) : b.speed}</strong></span>
                                 <span className="hud-stat-pill">MASS: <strong>{typeof b.mass === 'number' ? Number(b.mass.toFixed(1)) : b.mass}</strong></span>
                               </div>
@@ -6606,6 +8036,12 @@ function BallBattleGame() {
                                 <span className="hud-side-stat-lbl">DMG</span>
                                 <span className="hud-side-stat-val">{b.damage}</span>
                               </div>
+                              {getWeaponDamage(b) !== null && (
+                                <div className="hud-side-stat-item">
+                                  <span className="hud-side-stat-lbl">WPN</span>
+                                  <span className="hud-side-stat-val">{getWeaponDamage(b)}</span>
+                                </div>
+                              )}
                               <div className="hud-side-stat-item">
                                 <span className="hud-side-stat-lbl">SPD</span>
                                 <span className="hud-side-stat-val">{typeof b.speed === 'number' ? Number(b.speed.toFixed(1)) : b.speed}</span>

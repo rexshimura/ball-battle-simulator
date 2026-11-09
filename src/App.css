@@ -879,6 +879,56 @@ html, body, #root {
   100% { border-color: #fbbf24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.75); }
 }
 
+.hud-effect-badge.spitfire-active {
+  animation: spitfirePulse 1.2s infinite alternate;
+}
+
+@keyframes spitfirePulse {
+  0% { border-color: #0284c7; box-shadow: 0 0 3px rgba(2, 132, 199, 0.4); }
+  100% { border-color: #38bdf8; box-shadow: 0 0 9px rgba(56, 189, 248, 0.75); }
+}
+
+.hud-effect-badge.spitfire-target-active {
+  animation: spitfireTargetPulse 0.9s infinite alternate;
+}
+
+@keyframes spitfireTargetPulse {
+  0% { border-color: #0369a1; box-shadow: 0 0 3px rgba(14, 165, 233, 0.4); }
+  100% { border-color: #67e8f9; box-shadow: 0 0 9px rgba(103, 232, 249, 0.8); }
+}
+
+.hud-effect-badge.blue-burn-active {
+  animation: blueBurnPulse 0.9s infinite alternate;
+}
+
+@keyframes blueBurnPulse {
+  0% { border-color: #0284c7; box-shadow: 0 0 3px rgba(2, 132, 199, 0.5); }
+  100% { border-color: #67e8f9; box-shadow: 0 0 9px rgba(103, 232, 249, 0.85); }
+}
+
+.hud-effect-badge.slow-active {
+  animation: slowPulse 1.1s infinite alternate;
+}
+
+@keyframes slowPulse {
+  0% { border-color: #0891b2; box-shadow: 0 0 3px rgba(6, 182, 212, 0.4); }
+  100% { border-color: #67e8f9; box-shadow: 0 0 8px rgba(103, 232, 249, 0.75); }
+}
+
+.hud-effect-badge.dagger-active {
+  animation: daggerPulse 1.2s infinite alternate;
+}
+
+@keyframes daggerPulse {
+  0% { border-color: #0f766e; box-shadow: 0 0 3px rgba(45, 212, 191, 0.4); }
+  100% { border-color: #5eead4; box-shadow: 0 0 8px rgba(94, 234, 212, 0.7); }
+}
+
+.hud-effect-badge.dagger-disarmed {
+  border-color: #64748b;
+  opacity: 0.75;
+}
+
 .sim-team-tallies {
   display: flex;
   align-items: center;
@@ -917,7 +967,7 @@ html, body, #root {
 
 /* Left Sidebar */
 .sim-sidebar {
-  width: 300px;
+  width: 310px;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-ui);
   display: flex;
@@ -1093,8 +1143,9 @@ html, body, #root {
   background: #f59e0b;
 }
 
-.rarity-dot.mythic {
-  background: #ef4444;
+.rarity-dot.mythic,
+.rarity-dot.mythical {
+  background: #0ea5e9;
 }
 
 .sidebar-title {
@@ -1179,18 +1230,48 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 3px;
 }
 
 .ball-name-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ball-stat-sub {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-dim);
-  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 3.5px;
+  overflow: hidden;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+}
+
+.ball-stat-sub span {
+  flex-shrink: 0;
+}
+
+.ball-stat-dot {
+  opacity: 0.35;
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.ball-stat-wpn {
+  color: #f87171;
+  font-weight: 600;
+}
+
+[data-theme='light'] .ball-stat-wpn {
+  color: #dc2626;
 }
 
 .ball-rarity-pill {
@@ -1268,15 +1349,15 @@ html, body, #root {
 }
 
 .ball-rarity-pill.mythical {
-  background: #4c0519;
-  color: #fb7185;
-  border: 1px solid #881337;
+  background: #082f49;
+  color: #38bdf8;
+  border: 1px solid #0369a1;
 }
 
 [data-theme='light'] .ball-rarity-pill.mythical {
-  background: #ffe4e6;
-  color: #be123c;
-  border: 1px solid #fecdd3;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
 }
 
 /* Sidebar Footer */
@@ -2060,3 +2141,4 @@ html, body, #root {
   pointer-events: none;
   z-index: 5;
 }
+

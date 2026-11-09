@@ -282,3 +282,27 @@ export function DiceIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function SpitFireIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M12 2c1.5 3 4 5 4 9.5a4 4 0 0 1-8 0c0-2.2 1.2-4.5 2-6.5.5 1.5 1.2 2 1.2 2s.8-2 .8-5z" fill={color} fillOpacity="0.25" />
+      <path d="M8.5 14A3.5 3.5 0 0 0 12 18a3.5 3.5 0 0 0 3.5-4c0-1.8-1.2-2.8-1.8-4-.4 1.2-1.2 1.8-1.2 1.8s-.4-.8-.8-1.5c-.4 1.2-2 2-2.2 3.7z" fill={color} />
+      <circle cx="12" cy="19.5" r="1.5" fill={color} />
+    </svg>
+  );
+}
+
+export function SpitFireTargetIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="12" cy="12" r="7.5" strokeDasharray="3 2" />
+      <line x1="12" y1="1" x2="12" y2="5" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+      <line x1="1" y1="12" x2="5" y2="12" />
+      <line x1="19" y1="12" x2="23" y2="12" />
+      <path d="M12 9.5c.8 1.2 1.8 2 1.8 3.5a1.8 1.8 0 0 1-3.6 0c0-.9.6-1.8 1-2.5.2.6.5.8.5.8s.3-.8.3-1.8z" fill={color} />
+    </svg>
+  );
+}
+

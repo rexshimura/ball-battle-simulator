@@ -20,11 +20,11 @@ export const BALL_TYPES = {
   GROW: 'GROW',
 
   // Unique
-  ACCELERATOR: 'ACCELERATOR',
   GUN: 'GUN',
   MULTI: 'MULTI',
 
   // Epic
+  ACCELERATOR: 'ACCELERATOR',
   SHARD: 'SHARD',
   SNIPER: 'SNIPER',
 
@@ -32,6 +32,9 @@ export const BALL_TYPES = {
   THORN: 'THORN',
   FIRE: 'FIRE',
   DICE: 'DICE',
+
+  // Mythical
+  SPIT_FIRE: 'SPIT_FIRE',
 };
 
 export const RARITIES = {
@@ -253,21 +256,21 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.GROW,
     name: 'Grow Ball',
     rarity: RARITIES.RARE,
-    description: 'Expands in size and mass (up to 6.0 mass) upon colliding with enemy balls, gaining the Heavy Effect at 2.8+ size.',
+    description: 'Expands in size and mass (up to 10.0 mass) upon colliding with enemy balls or absorbing spit fire hits, gaining the Heavy Effect at 2.8+ size.',
     baseHp: 100,
     damage: 9,
     speed: 2.2,
     radius: 34,
     growthPerHit: 7.5,
-    maxRadius: 108,
+    growthPerFlameHit: 3.2,
+    maxRadius: 136,
     mass: 1.0,
-    maxMass: 6.0,
+    maxMass: 10.0,
     bodyColor: '#22c55e',      // vibrant green
     highlightColor: '#bbf7d0',
     shadowColor: '#15803d',
     special: 'Size Grow & Heavy (2.8+)',
   },
-
   // ==========================================
   // UNIQUE TIER
   // ==========================================
@@ -324,7 +327,6 @@ export const BALL_CONFIGS = {
     special: 'Split on Death',
     splitStage: 1,
   },
-
   // ==========================================
   // EPIC TIER
   // ==========================================
@@ -356,7 +358,7 @@ export const BALL_CONFIGS = {
     mass: 1.05,
     bulletDamage: 15,
     sniperCooldown: 4000,
-    aimDuration: 1200,
+    aimDuration: 1800, // +1.2s delay for precision lock-on (1.8s total aiming freeze)
     bodyColor: '#1e293b',      // Matte tactical slate
     highlightColor: '#38bdf8', // Precision cyan laser optic sheen
     shadowColor: '#090d16',    // Deep stealth black shadow
@@ -416,6 +418,27 @@ export const BALL_CONFIGS = {
     shadowColor: '#94a3b8',    // Slate beveled shadow
     pipColor: '#0f172a',       // Obsidian dice pips
     special: 'Lucky Roll (Low 75%, Mid 20%, High 5%, God 1% | 7 Hits Taken = High Roll Pity)',
+  },
+
+  // ==========================================
+  // MYTHICAL TIER
+  // ==========================================
+  [BALL_TYPES.SPIT_FIRE]: {
+    id: BALL_TYPES.SPIT_FIRE,
+    name: 'Spit Fire Ball',
+    rarity: RARITIES.MYTHICAL,
+    description: 'An ancient mythical unit enshrouded in celestial blue flames. On striking an enemy, it locks onto them with Flame Lock for 5 seconds and unleashes a homing barrage of mini blue flames curving towards the target that deal 1 DMG each and inflict Scorch. Incinerates enemy Thorn Traps on contact.',
+    baseHp: 100,
+    damage: 8,
+    speed: 2.3,
+    radius: 38,
+    mass: 1.1,
+    bodyColor: '#0284c7',      // celestial deep sky blue
+    highlightColor: '#e0f2fe', // radiant white-hot celestial highlight
+    shadowColor: '#0c4a6e',    // deep astral navy shadow
+    flameColor: '#38bdf8',     // vibrant cyan-blue flame
+    special: 'Incineration',
+    inflicts: 'Scorch & Flame Lock (5s)',
   },
 };
 
