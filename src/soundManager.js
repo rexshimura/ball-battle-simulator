@@ -43,6 +43,9 @@ const SFX_FILES = {
   diceRollHigh: '/sfx/sfx-ball-roll-high.mp3',
   diceRollMid: '/sfx/sfx-ball-roll-mid.mp3',
   diceRollLow: '/sfx/sfx-ball-roll-low.mp3',
+  daggerHit: '/sfx/sfx-ball-dagger-hit.mp3',
+  daggerPull: '/sfx/sfx-ball-dagger-pull.mp3',
+  daggerThrow: '/sfx/sfx-ball-dagger-throw.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
@@ -70,6 +73,9 @@ const SOUND_COOLDOWNS = {
   growHit: 80,
   growing: 80,
   shardHit: 45,
+  daggerHit: 60,
+  daggerPull: 60,
+  daggerThrow: 60,
 };
 
 class SoundManager {

@@ -306,3 +306,22 @@ export function SpitFireTargetIcon({ size = 11, color = 'currentColor' }) {
   );
 }
 
+export function SlowIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+      <path d="M4 12h-2M12 4V2" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function DaggerIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="m14.5 17.5-11-11v-3.5h3.5l11 11" />
+      <line x1="13" y1="19" x2="19" y2="13" />
+      <line x1="16" y1="16" x2="21" y2="21" />
+    </svg>
+  );
+}

@@ -23,6 +23,7 @@ export const BALL_TYPES = {
   // Unique
   GUN: 'GUN',
   MULTI: 'MULTI',
+  DAGGER: 'DAGGER',
 
   // Epic
   ACCELERATOR: 'ACCELERATOR',
@@ -328,6 +329,28 @@ export const BALL_CONFIGS = {
     special: 'Split on Death',
     splitStage: 1,
   },
+  [BALL_TYPES.DAGGER]: {
+    id: BALL_TYPES.DAGGER,
+    name: 'Dagger Ball',
+    rarity: RARITIES.UNIQUE,
+    description: 'Armed with a single combat dagger. Aims and throws its dagger at an enemy; if it hits a wall it sticks there. On hit, it embeds into the target inflicting Dagger Hit and Bleed while Dagger Ball is weaponless. Inflict Self: Dagger Pull calls the dagger back after duration or on collision.',
+    baseHp: 100,
+    damage: 8,
+    daggerDamage: 14,
+    speed: 2.3,
+    radius: 34,
+    mass: 1.0,
+    bodyColor: '#0f766e',      // dark jade assassin teal
+    highlightColor: '#5eead4', // glowing cyan-emerald glint
+    shadowColor: '#134e4a',    // deep dark teal shadow
+    special: 'Dagger Throw & Dagger Pull',
+    inflicts: 'Dagger Hit & Bleed',
+    selfInflicts: 'Dagger Pull',
+    daggerLength: 32,
+    daggerMissDuration: 2000,
+    daggerStuckDuration: 7000,
+  },
+
   // ==========================================
   // EPIC TIER
   // ==========================================

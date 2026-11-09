@@ -2142,3 +2142,21 @@ html, body, #root {
   z-index: 5;
 }
 
+/* Status Badges for Dagger Hit and Dagger Pull */
+.hud-effect-badge.dagger-hit-active {
+  animation: daggerHitPulse 1.1s infinite alternate;
+}
+
+@keyframes daggerHitPulse {
+  0% { border-color: #0f766e; box-shadow: 0 0 3px rgba(45, 212, 191, 0.4); }
+  100% { border-color: #2dd4bf; box-shadow: 0 0 8px rgba(45, 212, 191, 0.75); }
+}
+
+.hud-effect-badge.dagger-pull-active {
+  animation: daggerPullPulse 1.0s infinite alternate;
+}
+
+@keyframes daggerPullPulse {
+  0% { border-color: #0369a1; box-shadow: 0 0 3px rgba(56, 189, 248, 0.4); }
+  100% { border-color: #38bdf8; box-shadow: 0 0 9px rgba(56, 189, 248, 0.8); }
+}
