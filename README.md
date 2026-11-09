@@ -55,20 +55,21 @@ Once unleashed, balls bounce off perimeter walls and collide with authentic mome
 
 ## 🔮 Ball Classes & Rarity Tiers
 
-*6 rarity tiers available — with more ball classes actively on the way!*
+*7 rarity tiers available — with more ball classes actively on the way!*
 
 - **⚪ Common**: `Normal Ball` `Fast Ball` `Big Ball`
 - **🟢 Uncommon**: `Stone Ball` `Heal Ball` `Knife Ball` `Sword Ball` `Spike Ball`
-- **🔵 Rare**: `Steel Ball` `Glass Ball` `Hammer Ball` `Grow Ball`
-- **🟣 Unique**: `Accelerator Ball` `Gun Ball` `Multi Ball`
-- **🌸 Epic**: `Shard Ball` `Sniper Ball`
-- **🔥 Legendary**: `Thorn Ball` `Fire Ball` `Dice Ball` *(and more to come...)*
+- **🔵 Rare**: `Steel Ball` `Glass Ball` `Hammer Ball` `Grow Ball` `Dual Sword Ball`
+- **🟣 Unique**: `Dagger Ball` `Gun Ball` `Multi Ball`
+- **🌸 Epic**: `Accelerator Ball` `Shard Ball` `Sniper Ball`
+- **🔥 Legendary**: `Thorn Ball` `Fire Ball` `Dice Ball`
+- **✨ Mythical**: `Spit Fire Ball` *(and more to come...)*
 
 ---
 
 ## ⚡ Status Effects & Combat Mechanics
 
-`🩸 Bleed` &nbsp; `🛡️ Shield` &nbsp; `🏋️ Heavy` &nbsp; `🚀 Accelerate` &nbsp; `🎯 Shard Target` &nbsp; `🌿 Thorns` &nbsp; `🧬 Split` &nbsp; `🔥 Burn` &nbsp; `💚 Heal` &nbsp; `🎲 Lucky Roll`
+`🩸 Bleed` &nbsp; `🛡️ Shield` &nbsp; `🏋️ Heavy` &nbsp; `🚀 Accelerate` &nbsp; `🎯 Shard Target` &nbsp; `🌿 Thorns` &nbsp; `🧬 Split` &nbsp; `🔥 Burn` &nbsp; `💚 Heal` &nbsp; `🎲 Lucky Roll` &nbsp; `💠 Incineration` &nbsp; `🔥 Scorch` &nbsp; `🎯 Flame Lock` &nbsp; `🗡️ Dagger Hit` &nbsp; `🧲 Dagger Pull`
 
 > 💡 *Jump into the simulator and open the in-game **Effects & Weapons Codex** to explore full stats, scaling mechanics, and hidden unit passives!*
 

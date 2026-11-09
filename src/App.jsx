@@ -2328,6 +2328,63 @@ function BallBattleGame() {
     }
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingFading, setLoadingFading] = useState(false);
+
+  const dismissLoadingScreen = () => {
+    if (loadingFading) return;
+    setLoadingFading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 400);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const startTime = performance.now();
+
+    // Preload both SFX audio assets and the 3 action showcase GIFs
+    const gifUrls = [
+      '/gif/bbs-gif1.gif',
+      '/gif/bbs-gif2.gif',
+      '/gif/bbs-gif3.gif',
+    ];
+
+    const preloadGifs = gifUrls.map(url => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+      img.src = url;
+    }));
+
+    const soundPreload = sound.preloadAll(({ percent }) => {
+      if (!mounted) return;
+      setLoadingProgress(percent);
+    });
+
+    Promise.all([soundPreload, ...preloadGifs]).then(() => {
+      if (!mounted) return;
+      setLoadingProgress(100);
+
+      const elapsed = performance.now() - startTime;
+      const minDisplay = Math.max(0, 2400 - elapsed);
+
+      setTimeout(() => {
+        if (!mounted) return;
+        setLoadingFading(true);
+        setTimeout(() => {
+          if (!mounted) return;
+          setIsLoading(false);
+        }, 450);
+      }, minDisplay);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const [isMuted, setIsMuted] = useState(() => sound.isMuted);
 
   const toggleSound = () => {
@@ -6097,6 +6154,135 @@ function BallBattleGame() {
 
   return (
     <div className="sim-container" onContextMenu={(e) => e.preventDefault()}>
+      {/* Pure Crisp Monochrome Skeleton Loading Screen */}
+      {isLoading && (
+        <div
+          className={`tactical-loading-screen ${loadingFading ? 'fade-out' : ''}`}
+          onClick={dismissLoadingScreen}
+          role="button"
+          tabIndex={0}
+          title="Loading tactical sandbox..."
+        >
+          {/* Subtle Neutral Gray Grid Backdrop */}
+          <div className="loading-grid-backdrop" />
+
+          {/* Top Minimal Gray Progress Line */}
+          <div className="loading-top-line">
+            <div
+              className="loading-top-fill"
+              style={{ width: `${Math.max(6, loadingProgress)}%` }}
+            />
+          </div>
+
+          {/* SKELETON WIREFRAME: Exact 1:1 Layout Match, Zero Border-Radius, Pure Gray */}
+          <div className="skeleton-app-layout" aria-hidden="true">
+            {/* 1. Top Nav Skeleton */}
+            <header className="skeleton-nav">
+              <div className="skeleton-nav-left">
+                <div className="skeleton-box skeleton-nav-title skeleton-shimmer" />
+                <div className="skeleton-box skeleton-nav-badge skeleton-shimmer" />
+              </div>
+              <div className="skeleton-nav-right">
+                <div className="skeleton-box skeleton-nav-help skeleton-shimmer" />
+                <div className="skeleton-box skeleton-nav-btn skeleton-shimmer" />
+                <div className="skeleton-box skeleton-nav-btn-lg skeleton-shimmer" />
+                <div className="skeleton-box skeleton-nav-btn skeleton-shimmer" />
+                <div className="skeleton-box skeleton-nav-tally skeleton-shimmer" />
+              </div>
+            </header>
+
+            {/* 2. Main Body Skeleton */}
+            <div className="skeleton-body">
+              {/* Left Sidebar Skeleton (310px wide with buttons at bottom footer) */}
+              <aside className="skeleton-sidebar">
+                <div className="skeleton-sidebar-header">
+                  <div className="skeleton-box skeleton-arsenal-title skeleton-shimmer" />
+                  <div className="skeleton-box skeleton-filter-btn skeleton-shimmer" />
+                </div>
+
+                <div className="skeleton-sidebar-hint">
+                  <div className="skeleton-box skeleton-hint-line skeleton-shimmer" />
+                </div>
+
+                {/* List of 6 Crisp Rectangular Ball Cards */}
+                <div className="skeleton-ball-list">
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="skeleton-ball-card">
+                      <div className="skeleton-box skeleton-ball-avatar skeleton-shimmer" />
+                      <div className="skeleton-ball-meta">
+                        <div className="skeleton-box skeleton-card-name skeleton-shimmer" />
+                        <div className="skeleton-box skeleton-card-stats skeleton-shimmer" />
+                      </div>
+                      <div className="skeleton-box skeleton-card-rarity skeleton-shimmer" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Accurate Sidebar Footer: Start Battle, Clear, Speed Buttons */}
+                <div className="skeleton-sidebar-footer">
+                  <div className="skeleton-action-row">
+                    <div className="skeleton-box skeleton-btn-play skeleton-shimmer" />
+                    <div className="skeleton-box skeleton-btn-clear skeleton-shimmer" />
+                  </div>
+                  <div className="skeleton-speed-row">
+                    <div className="skeleton-box skeleton-speed-label skeleton-shimmer" />
+                    <div className="skeleton-speed-btns">
+                      {[1, 2, 3, 4].map(s => (
+                        <div key={s} className="skeleton-box skeleton-speed-pill skeleton-shimmer" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              {/* Right Arena Stage Skeleton */}
+              <main className="skeleton-arena-area">
+                {/* Floating Hint Banner Placeholder */}
+                <div className="skeleton-box skeleton-floating-banner skeleton-shimmer" />
+
+                {/* Stage Wrapper: Left HUD, Center 600x600 Arena, Right HUD */}
+                <div className="skeleton-stage-wrapper">
+                  {/* Left Side A HUD Card */}
+                  <div className="skeleton-hud-col">
+                    <div className="skeleton-hud-card">
+                      <div className="skeleton-box skeleton-hud-title skeleton-shimmer" />
+                      <div className="skeleton-box skeleton-hud-unit-card skeleton-shimmer" />
+                    </div>
+                  </div>
+
+                  {/* 600x600 Crisp Square Arena Box */}
+                  <div className="skeleton-arena-box">
+                    <div className="skeleton-arena-grid-canvas" />
+                    <div className="skeleton-corner top-left" />
+                    <div className="skeleton-corner top-right" />
+                    <div className="skeleton-corner bottom-left" />
+                    <div className="skeleton-corner bottom-right" />
+
+                    {/* Subtle Crisp Gray Center Reticle */}
+                    <div className="skeleton-radar-reticle">
+                      <div className="radar-ring ring-outer" />
+                      <div className="radar-ring ring-middle" />
+                      <div className="radar-ring ring-inner" />
+                      <div className="radar-crosshair-h" />
+                      <div className="radar-crosshair-v" />
+                      <div className="radar-center-core" />
+                    </div>
+                  </div>
+
+                  {/* Right Side B HUD Card */}
+                  <div className="skeleton-hud-col">
+                    <div className="skeleton-hud-card">
+                      <div className="skeleton-box skeleton-hud-title skeleton-shimmer" />
+                      <div className="skeleton-box skeleton-hud-unit-card skeleton-shimmer" />
+                    </div>
+                  </div>
+                </div>
+              </main>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Navbar */}
       <nav className="sim-top-nav">
         <div className="sim-title-area">

@@ -113,6 +113,62 @@ class SoundManager {
     });
   }
 
+  preloadAll(onProgress) {
+    if (typeof window === 'undefined') {
+      return Promise.resolve();
+    }
+
+    const entries = Object.entries(SFX_FILES);
+    const total = entries.length;
+    let completed = 0;
+
+    return new Promise((resolve) => {
+      let isDone = false;
+      const finish = () => {
+        if (!isDone) {
+          isDone = true;
+          resolve();
+        }
+      };
+
+      // Safety timeout: max 3.2s so loading screen never hangs on network issues
+      const timer = setTimeout(finish, 3200);
+
+      const notify = () => {
+        completed++;
+        if (onProgress) {
+          onProgress({
+            loaded: completed,
+            total: total,
+            percent: Math.min(100, Math.round((completed / total) * 100)),
+          });
+        }
+        if (completed >= total) {
+          clearTimeout(timer);
+          finish();
+        }
+      };
+
+      entries.forEach(([, src]) => {
+        const audio = new Audio();
+        let handled = false;
+        const markDone = () => {
+          if (!handled) {
+            handled = true;
+            notify();
+          }
+        };
+
+        audio.addEventListener('canplaythrough', markDone, { once: true });
+        audio.addEventListener('loadeddata', markDone, { once: true });
+        audio.addEventListener('error', markDone, { once: true });
+        audio.preload = 'auto';
+        audio.src = src;
+        audio.load();
+      });
+    });
+  }
+
   play(soundName, volumeMultiplier = 1) {
     if (this.isMuted) return;
 
