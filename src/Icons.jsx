@@ -325,3 +325,69 @@ export function DaggerIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function PushIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 5V2m0 20v-3m7-7h3M2 12h3" />
+      <path d="M17.5 6.5l2-2m-15 15l2-2m0-11l-2-2m15 15l-2-2" />
+    </svg>
+  );
+}
+
+export function BlessIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M12 2v20M2 12h20" />
+      <circle cx="12" cy="12" r="5" />
+    </svg>
+  );
+}
+
+export function TowerIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M5 21h14M6 21V9h12v12M4 4h4v3H4zM10 4h4v3h-4zM16 4h4v3h-4zM9 9l1-2h4l1 2M10 14h4v7h-4z" />
+    </svg>
+  );
+}
+
+export function HardIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M6 3h12l4 6-10 12L2 9z" />
+      <path d="M2 9h20M10 3l-2 6 4 12 4-12-2-6" />
+    </svg>
+  );
+}
+
+export function BroodIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <circle cx="9" cy="9" r="6" />
+      <circle cx="17.5" cy="16.5" r="3.5" />
+      <circle cx="6.5" cy="18.5" r="2.5" />
+    </svg>
+  );
+}
+
+export function RapierIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <line x1="21" y1="3" x2="9" y2="15" />
+      <path d="M5 19l4-4" />
+      <path d="M8 12c-2.5 0-5 2.5-5 5s2.5 5 5 5c2.5 0 2-3 2-4" />
+      <line x1="14" y1="6" x2="18" y2="10" />
+    </svg>
+  );
+}
+
+export function DashIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M13 5l7 7-7 7M6 5l7 7-7 7" />
+      <line x1="2" y1="12" x2="6" y2="12" />
+    </svg>
+  );
+}

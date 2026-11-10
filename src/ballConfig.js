@@ -5,6 +5,8 @@ export const BALL_TYPES = {
   NORMAL: 'NORMAL',
   FAST: 'FAST',
   BIG: 'BIG',
+  SMALL: 'SMALL',
+  SLOW: 'SLOW',
 
   // Uncommon
   STONE: 'STONE',
@@ -19,11 +21,14 @@ export const BALL_TYPES = {
   HAMMER: 'HAMMER',
   GROW: 'GROW',
   DUAL_SWORD: 'DUAL_SWORD',
+  PRIEST: 'PRIEST',
 
   // Unique
   GUN: 'GUN',
   MULTI: 'MULTI',
   DAGGER: 'DAGGER',
+  PUSH: 'PUSH',
+  RAPIER: 'RAPIER',
 
   // Epic
   ACCELERATOR: 'ACCELERATOR',
@@ -37,6 +42,12 @@ export const BALL_TYPES = {
 
   // Mythical
   SPIT_FIRE: 'SPIT_FIRE',
+  MOTHER: 'MOTHER',
+
+  // Baby Brood Summons
+  BABY_NORMAL: 'BABY_NORMAL',
+  BABY_SWORD: 'BABY_SWORD',
+  BABY_GUN: 'BABY_GUN',
 };
 
 export const RARITIES = {
@@ -84,10 +95,10 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.FAST,
     name: 'Fast Ball',
     rarity: RARITIES.COMMON,
-    description: 'Lighter and faster, lower damage.',
+    description: 'Lighter and faster with swift kinetic strikes.',
     baseHp: 100,
-    damage: 7,
-    speed: 3.6,
+    damage: 11,
+    speed: 3.8,
     radius: 34, // increased size
     mass: 0.75,
     bodyColor: '#38bdf8',      // light blue / sky
@@ -111,6 +122,39 @@ export const BALL_CONFIGS = {
     special: null,
   },
 
+    [BALL_TYPES.SMALL]: {
+    id: BALL_TYPES.SMALL,
+    name: 'Small Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Smaller and nimbler than a Normal Ball with a darker blue chassis.',
+    baseHp: 90,
+    damage: 9,
+    speed: 3.1,
+    radius: 25,
+    mass: 0.7,
+    bodyColor: '#1e40af',      // darker royal blue than normal ball
+    highlightColor: '#60a5fa',
+    shadowColor: '#172554',
+    special: null,
+  },
+  [BALL_TYPES.SLOW]: {
+    id: BALL_TYPES.SLOW,
+    name: 'Slow Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Anchored fortress chassis with 1.1 speed, innate Heavy Effect, and Tower Effect (complete immunity to pushes and knockbacks).',
+    baseHp: 110,
+    damage: 12,
+    speed: 1.1,
+    radius: 37,
+    mass: 2.6,
+    hasHeavy: true,
+    bodyColor: '#475569',      // heavy slate gunmetal
+    highlightColor: '#94a3b8',
+    shadowColor: '#0f172a',
+    hasTower: true,
+    special: 'Heavy & Tower (Push Immune)',
+  },
+
   // ==========================================
   // UNCOMMON TIER
   // ==========================================
@@ -118,7 +162,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.STONE,
     name: 'Stone Ball',
     rarity: RARITIES.UNCOMMON,
-    description: 'Heavy knockback-resistant chassis with +30% bonus HP (130 HP) and armored shell immune to bleed.',
+    description: 'Heavy knockback-resistant chassis with +30% bonus HP (130 HP), armored shell immune to bleed, and Hard composition (takes 2x damage from Hammer Ball).',
     baseHp: 130,
     damage: 8,
     speed: 1.3,
@@ -129,7 +173,8 @@ export const BALL_CONFIGS = {
     shadowColor: '#18181b',
     hasTexture: true,
     hasArmor: true, // Immune to bleed effects
-    special: 'Heavy (+30% HP) & Armored',
+    hasHard: true,
+    special: 'Hard, Heavy (+30% HP) & Armored',
   },
   [BALL_TYPES.HEAL]: {
     id: BALL_TYPES.HEAL,
@@ -182,7 +227,7 @@ export const BALL_CONFIGS = {
     highlightColor: '#fca5a5', // light red shine
     shadowColor: '#7f1d1d',    // deep dark red
     special: 'Spinning Blade',
-    bladeLength: 54,           // longer blade to match bigger body
+    bladeLength: 82,           // bigger, thicker combat sword blade
   },
   [BALL_TYPES.SPIKE]: {
     id: BALL_TYPES.SPIKE,
@@ -209,7 +254,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.STEEL,
     name: 'Steel Ball',
     rarity: RARITIES.RARE,
-    description: 'Gains a kinetic energy barrier shield (+20 Shield) every 4 hits taken.',
+    description: 'Gains a kinetic energy barrier shield (+20 Shield) every 4 hits taken. Hard metallic composition (takes 2x damage from Hammer Ball).',
     baseHp: 100,
     damage: 11,
     speed: 2.1,
@@ -218,7 +263,8 @@ export const BALL_CONFIGS = {
     bodyColor: '#cbd5e1',      // metallic polished steel
     highlightColor: '#ffffff', // bright chrome sheen
     shadowColor: '#475569',    // deep gunmetal shadow
-    special: 'Shield on 4 Hits',
+    hasHard: true,
+    special: 'Hard & Shield on 4 Hits',
     shieldAmount: 20,
   },
   [BALL_TYPES.GLASS]: {
@@ -241,7 +287,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.HAMMER,
     name: 'Hammer Ball',
     rarity: RARITIES.RARE,
-    description: 'Equipped with heavy spinning warhammer. Rebounding blows push enemies back with massive Knockback.',
+    description: 'Equipped with heavy spinning warhammer. Rebounding blows push enemies back with massive Knockback, and deal 2x damage against Hard/Dense balls (Steel Ball, Stone Ball, Spike Ball).',
     baseHp: 100,
     damage: 7,
     hammerDamage: 24,
@@ -251,7 +297,7 @@ export const BALL_CONFIGS = {
     bodyColor: '#991b1b',      // darker version of red
     highlightColor: '#f87171',
     shadowColor: '#450a0a',
-    special: 'Heavy Knockback',
+    special: 'Heavy Knockback & 2x DMG vs Hard',
     hammerLength: 64,
   },
   [BALL_TYPES.GROW]: {
@@ -289,6 +335,27 @@ export const BALL_CONFIGS = {
     shadowColor: '#b91c1c',    // deep dark red
     special: 'Dual Spinning Blades',
     bladeLength: 50,
+  },
+
+    [BALL_TYPES.PRIEST]: {
+    id: BALL_TYPES.PRIEST,
+    name: 'Priest Ball',
+    rarity: RARITIES.RARE,
+    description: 'Channels Divine Blessing after 9s to cast a map-wide heal across the entire canvas on self and all living allies (heal is divided evenly among beneficiaries). Buffs allies with Heal, no enemy inflicts.',
+    baseHp: 100,
+    damage: 6,
+    speed: 2.3,
+    radius: 34,
+    mass: 1.0,
+    blessCooldown: 9000,
+    blessRadius: 2000,
+    blessPool: 24,
+    bodyColor: '#fef3c7',      // holy ivory clerical robe
+    highlightColor: '#fde047', // radiant celestial gold
+    shadowColor: '#d97706',    // warm holy amber shadow
+    special: 'Blessing (Canvas-wide Heal after 9s)',
+    selfInflicts: 'Blessing',
+    buffs: 'Heal',
   },
 
   // ==========================================
@@ -333,22 +400,70 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.DAGGER,
     name: 'Dagger Ball',
     rarity: RARITIES.UNIQUE,
-    description: 'Armed with a single combat dagger. Aims and throws its dagger at an enemy; if it hits a wall it sticks there. On hit, it embeds into the target inflicting Dagger Hit and Bleed while Dagger Ball is weaponless. Inflict Self: Dagger Pull calls the dagger back after duration or on collision.',
+    description: 'Armed with a large combat dagger that spins and bounces. Contact with body or weapon marks the enemy with Dagger Mark; after 2s delay, Dagger Ball stops moving to aim for 2s and throws its dagger. Hits embed into the target inflicting Bleed and Slow (-25% SPD, -25% DMG), retrievable only by body ramming that enemy. Misses stick to walls and return via telekinesis after 4s.',
     baseHp: 100,
-    damage: 8,
-    daggerDamage: 14,
+    damage: 4,
+    daggerDamage: 10,
     speed: 2.3,
     radius: 34,
     mass: 1.0,
     bodyColor: '#0f766e',      // dark jade assassin teal
     highlightColor: '#5eead4', // glowing cyan-emerald glint
     shadowColor: '#134e4a',    // deep dark teal shadow
-    special: 'Dagger Throw & Dagger Pull',
-    inflicts: 'Dagger Hit & Bleed',
-    selfInflicts: 'Dagger Pull',
-    daggerLength: 32,
-    daggerMissDuration: 2000,
-    daggerStuckDuration: 7000,
+    special: 'Dagger Throw & Telekinesis Recall',
+    inflicts: 'Dagger Mark, Bleed & Slow',
+    selfInflicts: 'Telekinesis Recall',
+    daggerLength: 44,
+    daggerAimDuration: 2000,
+    daggerDelayDuration: 2000,
+    daggerWallDuration: 4000,
+  },
+
+    [BALL_TYPES.PUSH]: {
+    id: BALL_TYPES.PUSH,
+    name: 'Push Ball',
+    rarity: RARITIES.UNIQUE,
+    description: 'Requires 1 body hit on an enemy to charge a kinetic repulsor pulse. Once charged, pushes nearby enemy balls violently away in a 130px radius, inflicting Knockback, and must land another hit to charge again.',
+    baseHp: 100,
+    damage: 6,
+    speed: 2.5,
+    radius: 34,
+    mass: 1.25,
+    bodyColor: '#4338ca',      // deep kinetic indigo
+    highlightColor: '#818cf8', // radiant electric violet glint
+    shadowColor: '#1e1b4b',    // dark midnight indigo shadow
+    special: 'Hit-Charged Repulsor Pulse',
+    inflicts: 'Knockback',
+    selfInflicts: 'Push',
+    pushRadius: 130,
+    pushCooldown: 2500,
+    pushForce: 10.5,
+    pushDamage: 6,
+  },
+  [BALL_TYPES.RAPIER]: {
+    id: BALL_TYPES.RAPIER,
+    name: 'Rapier Ball',
+    rarity: RARITIES.UNIQUE,
+    description: 'Equipped with an elegant fencing rapier dealing 12 weapon damage that spins in normal combat. Landing a hit (5 body DMG or 12 weapon DMG) marks that enemy with Rapier Mark; Rapier Ball halts and aims for 0.8s before executing a lightning forward Dash thrust piercing for 28 DMG.',
+    baseHp: 100,
+    damage: 5,
+    rapierDamage: 12,
+    dashDamage: 28,
+    speed: 2.3,
+    dashSpeed: 17.5,
+    radius: 34,
+    mass: 1.0,
+    bodyColor: '#1e293b',      // elegant midnight duelist slate
+    highlightColor: '#f43f5e', // crimson duelist flourish
+    shadowColor: '#0f172a',    // deep dark shadow
+    guardColor: '#fbbf24',     // ornate golden swept cup hilt
+    special: 'Rapier Mark & Dash Thrust',
+    inflicts: 'Rapier Mark',
+    selfInflicts: 'Dash',
+    rapierLength: 56,
+    aimDuration: 800,
+    dashDuration: 350,
+    rapierCooldown: 2800,
   },
 
   // ==========================================
@@ -481,6 +596,83 @@ export const BALL_CONFIGS = {
     flameColor: '#38bdf8',     // vibrant cyan-blue flame
     special: 'Incineration',
     inflicts: 'Scorch & Flame Lock (5s)',
+  },
+  [BALL_TYPES.MOTHER]: {
+    id: BALL_TYPES.MOTHER,
+    name: 'Mother Ball',
+    rarity: RARITIES.MYTHICAL,
+    description: 'A mythical matriarch unit that is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby (high HP), Sword Baby (spinning blade), and Gun Baby (projectile nozzle), maintaining up to 3 active baby balls.',
+    baseHp: 120,
+    damage: 7,
+    speed: 1.2,
+    radius: 42,
+    mass: 2.2,
+    bodyColor: '#831843',      // royal cosmic magenta / fuchsia
+    highlightColor: '#fbcfe8', // radiant rose gold glint
+    shadowColor: '#500724',    // deep dark wine shadow
+    special: 'Brood (Summons 3 Baby Varieties, Costs 5 HP)',
+    selfInflicts: 'Brood',
+    broodCooldown: 5500,
+    broodHpCost: 5,
+    broodMaxCap: 3,
+  },
+
+  // ==========================================
+  // SUMMONED BABY BROOD (SUMMON ONLY)
+  // ==========================================
+  [BALL_TYPES.BABY_NORMAL]: {
+    id: BALL_TYPES.BABY_NORMAL,
+    name: 'Baby Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Tough frontline baby ball spawned by Mother Ball with higher HP than other baby balls.',
+    baseHp: 65,
+    damage: 6,
+    speed: 2.8,
+    radius: 17,
+    mass: 0.5,
+    bodyColor: '#1e3a8a',
+    highlightColor: '#93c5fd',
+    shadowColor: '#0f172a',
+    isSummonOnly: true,
+    special: 'Tough Baby (+65% HP)',
+  },
+  [BALL_TYPES.BABY_SWORD]: {
+    id: BALL_TYPES.BABY_SWORD,
+    name: 'Baby Sword Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Mini skirmisher baby ball armed with a spinning miniature combat sword.',
+    baseHp: 40,
+    damage: 4,
+    bladeDamage: 12,
+    bladeLength: 26,
+    speed: 2.9,
+    radius: 16,
+    mass: 0.45,
+    bodyColor: '#b91c1c',
+    highlightColor: '#fca5a5',
+    shadowColor: '#450a0a',
+    isSummonOnly: true,
+    special: 'Mini Spinning Blade',
+  },
+  [BALL_TYPES.BABY_GUN]: {
+    id: BALL_TYPES.BABY_GUN,
+    name: 'Baby Gun Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Mini ranged artillery baby ball armed with a rotating projectile nozzle.',
+    baseHp: 40,
+    damage: 4,
+    speed: 2.9,
+    radius: 16,
+    mass: 0.45,
+    gunCooldown: 3500,
+    bulletDamage: 14,
+    barrelLength: 24,
+    bodyColor: '#d97706',
+    highlightColor: '#fde047',
+    shadowColor: '#451a03',
+    gunColor: '#78350f',
+    isSummonOnly: true,
+    special: 'Mini Gun Cannon (3.5s Cooldown)',
   },
 };
 

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon, SpitFireIcon, SpitFireTargetIcon, SlowIcon, DaggerIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, PushIcon, BlessIcon, TowerIcon, HardIcon, BroodIcon, RapierIcon, DashIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon, SpitFireIcon, SpitFireTargetIcon, SlowIcon, DaggerIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -30,6 +30,7 @@ function getWeaponDamage(ball) {
   const cfg = ball?.config || (ball?.type ? BALL_CONFIGS[ball.type] : ball);
   if (!cfg) return null;
   if (cfg.bladeDamage !== undefined) return cfg.bladeDamage;
+  if (cfg.rapierDamage !== undefined) return cfg.rapierDamage;
   if (cfg.knifeDamage !== undefined) return cfg.knifeDamage;
   if (cfg.daggerDamage !== undefined) return cfg.daggerDamage;
   if (cfg.hammerDamage !== undefined) return cfg.hammerDamage;
@@ -39,6 +40,24 @@ function getWeaponDamage(ball) {
 }
 
 const EFFECT_TOOLTIPS = {
+  BROOD: {
+    title: 'BROOD',
+    category: 'ABILITY (SELF)',
+    icon: <BroodIcon size={14} color="#f472b6" />,
+    description: "Mother Ball is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby, Sword Baby, and Gun Baby up to 3 active baby balls.",
+  },
+  HARD: {
+    title: 'HARD',
+    category: 'EFFECT TAG',
+    icon: <HardIcon size={14} color="#94a3b8" />,
+    description: "Dense, hardened composition. Vulnerable to concussive hammer bludgeons: Hammer Ball deals twice (2x) the damage against Hard targets.",
+  },
+  TOWER: {
+    title: 'TOWER',
+    category: 'EFFECT TAG',
+    icon: <TowerIcon size={14} color="#94a3b8" />,
+    description: "Anchored fortress chassis. Possesses reduced movement speed (1.1 SPD) but complete immunity to pushes, shockwaves, and knockback forces.",
+  },
   HEAVY: {
     title: 'HEAVY',
     category: 'EFFECT TAG',
@@ -207,23 +226,65 @@ const EFFECT_TOOLTIPS = {
     icon: <SpitFireTargetIcon size={14} color="#0ea5e9" />,
     description: 'Locked by Spit Fire Ball for 5 seconds, targeted by a curving barrage of mini celestial blue flames that deal 1 DMG and inflict Scorch.',
   },
+  DAGGER_MARK: {
+    title: 'DAGGER MARK',
+    category: 'INFLICT',
+    icon: <DaggerIcon size={14} color="#14b8a6" />,
+    description: 'Inflicted upon enemy contact with Dagger Ball\'s body or dagger. After 2s delay, Dagger Ball stops moving to aim for 2s and throws its dagger at this target.',
+  },
   DAGGER_HIT: {
     title: 'DAGGER HIT',
     category: 'INFLICT',
     icon: <DaggerIcon size={14} color="#2dd4bf" />,
-    description: 'Stabbed by an embedded combat dagger. Reduces Movement Speed by 20% and Damage Dealt by 25% until the dagger is extracted.',
+    description: 'Hampered by an embedded combat dagger. Inflicts Slow (-25% Movement Speed and -25% Damage Dealt) and Bleed. Stuck dagger can only be retrieved by Dagger Ball body contact.',
   },
   DAGGER_PULL: {
-    title: 'DAGGER PULL',
+    title: 'TELEKINESIS RECALL',
     category: 'INFLICT (SELF)',
     icon: <DaggerIcon size={14} color="#38bdf8" />,
-    description: 'Self-inflict ability that calls the thrown combat dagger back to Dagger Ball. Rips out embedded daggers from enemies or wall surfaces to re-arm.',
+    description: 'Telekinetically recalls the missed combat dagger back to Dagger Ball 4 seconds after sticking into an arena wall.',
+  },
+  BLESSING: {
+    title: 'BLESSING',
+    category: 'ABILITY (SELF)',
+    icon: <BlessIcon size={14} color="#f59e0b" />,
+    description: "Priest Ball channels a map-wide divine blessing after 9s that heals self and all living allies across the entire canvas (heal is divided evenly among beneficiaries).",
+  },
+  PUSH: {
+    title: 'PUSH',
+    category: 'ABILITY (SELF)',
+    icon: <PushIcon size={14} color="#818cf8" />,
+    description: 'Charged by landing 1 hit on an enemy. Releases a powerful kinetic repulsor shockwave in a 130px radius that violently pushes nearby enemies away, then requires another hit to recharge.',
+  },
+  KNOCKBACK: {
+    title: 'KNOCKBACK',
+    category: 'INFLICT',
+    icon: <KnockbackIcon size={14} color="#a5b4fc" />,
+    description: "Violently propelled away by Push Ball's kinetic repulsor shockwave pulse.",
   },
   DAGGER: {
     title: 'DAGGER',
     category: 'WEAPON TAG',
     icon: <DaggerIcon size={14} color="#2dd4bf" />,
-    description: 'Equipped with a thrown combat dagger dealing 14 projectile damage that embeds into victims or arena walls, inflicting Dagger Hit and Bleed.',
+    description: 'Spins and bounces with a large combat dagger. Contact inflicts Dagger Mark, followed 2s later by stopping to aim for 2s and throwing its dagger.',
+  },
+  DASH: {
+    title: 'DASH',
+    category: 'EFFECT (SELF)',
+    icon: <DashIcon size={14} color="#fbbf24" />,
+    description: 'High-velocity forward thrust trait. Launches Rapier Ball forward at 17.5 speed toward its marked target, piercing for 28 thrust damage.',
+  },
+  RAPIER_MARK: {
+    title: 'RAPIER MARK',
+    category: 'INFLICT',
+    icon: <RapierIcon size={14} color="#f43f5e" />,
+    description: 'Marked by Rapier Ball upon contact. Rapier Ball stops moving to aim its rapier directly at this target for 0.8s before executing a deadly dash thrust.',
+  },
+  RAPIER: {
+    title: 'RAPIER',
+    category: 'WEAPON TAG',
+    icon: <RapierIcon size={14} color="#fbbf24" />,
+    description: 'Slender fencing rapier with ornate golden cup-hilt. Rotates dealing 12 weapon damage; on contact, marks enemy, aims for 0.8s, and dashes forward with a 28 DMG thrust.',
   },
 };
 
@@ -933,6 +994,141 @@ function drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight) {
   ctx.restore();
 }
 
+// Accurate 4-sided tactical targeting reticle for enemy marked by Dagger Ball
+function drawDaggerMarkReticle(ctx, ball, renderX, renderY, isLight) {
+  if (!ball.daggerMarkTimer || ball.daggerMarkTimer <= 0 || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.001;
+  const r = ball.radius;
+
+  ctx.save();
+  ctx.translate(renderX, renderY);
+
+  // Gentle subtle breathing pulse (no wild spinning)
+  const pulse = Math.sin(now * 4) * 1.2;
+  const bracketR = r + 7 + pulse;
+
+  ctx.strokeStyle = '#2dd4bf';
+  ctx.lineWidth = 2.0;
+  ctx.shadowColor = '#14b8a6';
+  ctx.shadowBlur = 8;
+
+  // 4 accurately positioned corner brackets framing the 4 sides of the ball
+  for (let b = 0; b < 4; b++) {
+    const bAng = (b * Math.PI) / 2;
+    ctx.save();
+    ctx.rotate(bAng);
+
+    // Side curved bracket
+    ctx.beginPath();
+    ctx.arc(0, 0, bracketR, -0.32, 0.32);
+    ctx.stroke();
+
+    // Sharp inward targeting tick aligned directly with the center
+    ctx.beginPath();
+    ctx.moveTo(bracketR + 5, 0);
+    ctx.lineTo(bracketR - 1, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Clear digital pill indicator above the ball
+  ctx.shadowBlur = 0;
+  const secLeft = (ball.daggerMarkTimer / 1000).toFixed(1);
+  const pillY = -r - 18;
+
+  ctx.fillStyle = isLight ? 'rgba(240, 253, 250, 0.95)' : 'rgba(15, 23, 42, 0.9)';
+  ctx.strokeStyle = '#2dd4bf';
+  ctx.lineWidth = 1;
+  const tagW = 76;
+  const tagH = 15;
+  ctx.beginPath();
+  ctx.roundRect(-tagW / 2, pillY - tagH / 2, tagW, tagH, 3);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '700 8.5px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = isLight ? '#0f766e' : '#2dd4bf';
+  ctx.fillText(`MARK ${secLeft}s`, 0, pillY);
+
+  ctx.restore();
+}
+
+// 4-sided fencing crosshair for enemy marked by Rapier Ball
+function drawRapierMarkReticle(ctx, ball, renderX, renderY, isLight) {
+  if (!ball.rapierMarkTimer || ball.rapierMarkTimer <= 0 || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.001;
+  const r = ball.radius;
+
+  ctx.save();
+  ctx.translate(renderX, renderY);
+
+  const pulse = Math.sin(now * 6) * 1.5;
+  const bracketR = r + 8 + pulse;
+
+  // Crimson duelist crosshair rings
+  ctx.strokeStyle = '#f43f5e';
+  ctx.lineWidth = 1.8;
+  ctx.shadowColor = '#f43f5e';
+  ctx.shadowBlur = 8;
+
+  // 4 corner fencing bracket marks
+  for (let b = 0; b < 4; b++) {
+    const bAng = (b * Math.PI) / 2 + Math.PI / 4;
+    ctx.save();
+    ctx.rotate(bAng);
+    ctx.beginPath();
+    ctx.arc(0, 0, bracketR, -0.28, 0.28);
+    ctx.stroke();
+
+    // Inward pointing needle tick
+    ctx.beginPath();
+    ctx.moveTo(bracketR + 4, 0);
+    ctx.lineTo(bracketR - 3, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Inner spinning rapier diamond
+  const rot = now * 2.5;
+  ctx.rotate(rot);
+  const diaR = r * 0.45;
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(diaR, 0);
+  ctx.lineTo(0, diaR);
+  ctx.lineTo(-diaR, 0);
+  ctx.lineTo(0, -diaR);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.rotate(-rot);
+  ctx.shadowBlur = 0;
+
+  // Countdown timer tag
+  const secLeft = (ball.rapierMarkTimer / 1000).toFixed(1);
+  const pillY = bracketR + 13;
+  ctx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.9)';
+  ctx.strokeStyle = '#f43f5e';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(-30, pillY - 7, 60, 14, 4);
+  else ctx.rect(-30, pillY - 7, 60, 14);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.font = '700 8.5px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f43f5e';
+  ctx.fillText(`MARK ${secLeft}s`, 0, pillY);
+
+  ctx.restore();
+}
+
 // Render embedded combat daggers stuck in victim body
 function drawStuckDaggers(ctx, ball, renderX, renderY) {
   if (!ball.stuckDaggers || ball.stuckDaggers.length === 0 || ball.isDead || ball.isDying) return;
@@ -942,33 +1138,35 @@ function drawStuckDaggers(ctx, ball, renderX, renderY) {
     ctx.rotate(d.relAngle);
 
     const r = ball.radius;
-    ctx.translate(r - 2, 0);
+    ctx.translate(r - 3, 0);
     ctx.rotate(Math.PI * 0.12);
 
     // Embedded blade tip inside flesh
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(-6, -2, 6, 4);
+    ctx.fillRect(-8, -3, 8, 6);
 
     // Bolster / guard
     ctx.fillStyle = '#134e4a';
-    ctx.fillRect(0, -5, 4, 10);
+    ctx.fillRect(0, -7, 5, 14);
     ctx.strokeStyle = '#2dd4bf';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, -5, 4, 10);
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(0, -7, 5, 14);
 
     // Protruding hilt
     ctx.fillStyle = '#0f766e';
-    ctx.fillRect(4, -2.5, 12, 5);
+    ctx.fillRect(5, -3.5, 14, 7);
     ctx.fillStyle = '#2dd4bf';
-    ctx.fillRect(16, -3.5, 3, 7);
+    ctx.fillRect(19, -4.5, 4, 9);
 
-    // Subtle countdown timer indicator beside hilt
-    if (d.timer > 0) {
-      const secLeft = (d.timer / 1000).toFixed(1);
-      ctx.font = '700 8px "JetBrains Mono", monospace';
-      ctx.fillStyle = '#2dd4bf';
-      ctx.fillText(`${secLeft}s`, 22, -5);
-    }
+    // Protruding blade back length
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.moveTo(0, -4);
+    ctx.lineTo(6, -3.5);
+    ctx.lineTo(6, 3.5);
+    ctx.lineTo(0, 4);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
   });
@@ -1034,9 +1232,10 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Rotating sword for Sword Ball & Dual Sword Ball (front and back swords)
-  if (config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD) {
+  // Rotating sword for Sword Ball, Dual Sword Ball & Baby Sword Ball (front and back swords)
+  if (config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.BABY_SWORD) {
     const isDual = config.id === BALL_TYPES.DUAL_SWORD;
+    const isBaby = config.id === BALL_TYPES.BABY_SWORD;
     const angles = isDual ? [0, Math.PI] : [0];
 
     angles.forEach(offsetAng => {
@@ -1044,7 +1243,8 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.translate(x, y);
       ctx.rotate(rotationAngle + offsetAng);
 
-      const bladeLength = config.bladeLength || 54;
+      const scale = radius / (config.radius || 38);
+      const bladeLength = (config.bladeLength || (isBaby ? 28 : (isDual ? 56 : 82))) * (radius < 25 ? scale : 1);
       const bladeGrad = ctx.createLinearGradient(radius - 2, 0, radius + bladeLength, 0);
 
       if (isHit) {
@@ -1059,27 +1259,174 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
         }
       } else {
         bladeGrad.addColorStop(0, '#94a3b8');
-        bladeGrad.addColorStop(0.5, '#f8fafc');
-        bladeGrad.addColorStop(1, '#e2e8f0');
+        bladeGrad.addColorStop(0.45, '#f8fafc');
+        bladeGrad.addColorStop(1, '#cbd5e1');
       }
+
+      // Bigger & thicker sword blade: wider base & fuller cross section
+      const halfW = (isBaby ? 4.0 : (isDual ? 6.5 : 9.5)) * (radius < 25 ? scale : 1);
+      const tipTaperDist = (isBaby ? 8 : 18) * (radius < 25 ? scale : 1);
+      const guardW = (isBaby ? 8.0 : (isDual ? 12.0 : 16.0)) * (radius < 25 ? scale : 1);
 
       ctx.fillStyle = bladeGrad;
       ctx.beginPath();
-      ctx.moveTo(radius - 2, -4);
-      ctx.lineTo(radius + bladeLength - 10, -3.5);
+      ctx.moveTo(radius - 2, -halfW);
+      ctx.lineTo(radius + bladeLength - tipTaperDist, -halfW * 0.9);
       ctx.lineTo(radius + bladeLength, 0); // sharp tip
-      ctx.lineTo(radius + bladeLength - 10, 3.5);
-      ctx.lineTo(radius - 2, 4);
+      ctx.lineTo(radius + bladeLength - tipTaperDist, halfW * 0.9);
+      ctx.lineTo(radius - 2, halfW);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : (isLight ? '#475569' : '#e2e8f0');
-      ctx.lineWidth = isHit ? 1.6 : (isLight ? 0.9 : 1.2);
+
+      ctx.strokeStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : (isLight ? '#334155' : '#cbd5e1');
+      ctx.lineWidth = isHit ? 2.0 : (isLight ? 1.2 : 1.5);
       ctx.stroke();
 
+      // Sleek fuller groove down the center of the blade
+      if (!isBaby) {
+        ctx.strokeStyle = isLight ? '#64748b' : '#94a3b8';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(radius + 2, 0);
+        ctx.lineTo(radius + bladeLength - tipTaperDist - 2, 0);
+        ctx.stroke();
+      }
+
+      // Reinforced golden crossguard
       ctx.fillStyle = isHit ? (isLight ? '#991b1b' : '#ffffff') : '#d97706';
-      ctx.fillRect(radius - 2, -7, 4, 14);
+      ctx.fillRect(radius - 2, -guardW, isBaby ? 3.5 : 6.5, guardW * 2);
+
+      // Crossguard decorative end caps
+      if (!isBaby) {
+        ctx.fillStyle = isLight ? '#b45309' : '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(radius, -guardW, 2.5, 0, Math.PI * 2);
+        ctx.arc(radius, guardW, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       ctx.restore();
     });
+  }
+
+  // Rotating fencing rapier for Rapier Ball
+  if (config.id === BALL_TYPES.RAPIER) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotationAngle);
+
+    const scale = radius / (config.radius || 34);
+    const rapierLen = (config.rapierLength || 58) * (radius < 25 ? scale : 1);
+    const isAiming = extraData?.isAiming;
+    const isDashing = extraData?.isDashing;
+
+    // Laser aiming guide line extending forward toward marked target
+    if (isAiming && radius > 25) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(radius + rapierLen, 0);
+      ctx.lineTo(radius + rapierLen + 180, 0);
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.85)';
+      ctx.lineWidth = 1.6;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+
+      // Targeting pulse dot at needle tip
+      ctx.beginPath();
+      ctx.arc(radius + rapierLen, 0, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#f43f5e';
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // High velocity dash thrust speed aura
+    if (isDashing && radius > 25) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(radius + rapierLen + 14, 0);
+      ctx.lineTo(radius + 10, -12);
+      ctx.lineTo(radius - 5, -5);
+      ctx.lineTo(radius - 5, 5);
+      ctx.lineTo(radius + 10, 12);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 1. Slender Needle-like Rapier Blade (long, ultra-thin needle profile)
+    const bladeBaseW = Math.max(1.8, 3.2 * scale);
+    const bladeGrad = ctx.createLinearGradient(radius - 2, 0, radius + rapierLen, 0);
+    if (isHit || isDashing) {
+      bladeGrad.addColorStop(0, '#ffffff');
+      bladeGrad.addColorStop(0.5, '#f43f5e');
+      bladeGrad.addColorStop(1, '#e11d48');
+    } else {
+      bladeGrad.addColorStop(0, '#cbd5e1');
+      bladeGrad.addColorStop(0.4, '#ffffff');
+      bladeGrad.addColorStop(1, '#94a3b8');
+    }
+
+    ctx.fillStyle = bladeGrad;
+    ctx.beginPath();
+    ctx.moveTo(radius - 2, -bladeBaseW);
+    ctx.lineTo(radius + rapierLen - 6, -1.0 * scale);
+    ctx.lineTo(radius + rapierLen, 0); // razor sharp needle point
+    ctx.lineTo(radius + rapierLen - 6, 1.0 * scale);
+    ctx.lineTo(radius - 2, bladeBaseW);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = isHit ? '#f43f5e' : (isLight ? '#334155' : '#e2e8f0');
+    ctx.lineWidth = isHit ? 1.4 : 0.9;
+    ctx.stroke();
+
+    // Central gleam along needle blade
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(radius + 4, 0);
+    ctx.lineTo(radius + rapierLen - 8, 0);
+    ctx.stroke();
+
+    // 2. Ornate Golden Swept Cup Hilt (curved bell guard protecting the duelist's hand)
+    const cupR = Math.max(5, 10 * scale);
+    const cupGrad = ctx.createLinearGradient(radius - 4, -cupR, radius + 8, cupR);
+    cupGrad.addColorStop(0, '#fde047');
+    cupGrad.addColorStop(0.5, '#d97706');
+    cupGrad.addColorStop(1, '#92400e');
+
+    ctx.fillStyle = cupGrad;
+    ctx.beginPath();
+    ctx.arc(radius + 2, 0, cupR, -Math.PI * 0.42, Math.PI * 0.42);
+    ctx.lineTo(radius - 3, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = isLight ? '#78350f' : '#fef08a';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Swept guard quillons (upper & lower fencing bows)
+    ctx.strokeStyle = isLight ? '#b45309' : '#fbbf24';
+    ctx.lineWidth = 1.6 * scale;
+    ctx.beginPath();
+    ctx.moveTo(radius - 2, -cupR);
+    ctx.quadraticCurveTo(radius + 8, -cupR - 3, radius + 11, -cupR + 4);
+    ctx.moveTo(radius - 2, cupR);
+    ctx.quadraticCurveTo(radius + 8, cupR + 3, radius + 11, cupR - 4);
+    ctx.stroke();
+
+    // 3. Duelist grip & golden round pommel
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(radius - 7 * scale, -2 * scale, 6 * scale, 4 * scale);
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(radius - 7 * scale, 0, 2.8 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 
   // Rotating combat knife for Knife Ball (Short, fast, razor-sharp combat dagger)
@@ -1146,30 +1493,30 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     ctx.translate(x, y);
     ctx.rotate(rotationAngle);
 
-    const daggerLen = config.daggerLength || 32;
+    const daggerLen = config.daggerLength || 44;
 
     // Compact sheath / mounting bracket on the ball body
     ctx.fillStyle = isLight ? '#042f2e' : '#134e4a';
-    ctx.fillRect(radius - 3, -5, 5, 10);
+    ctx.fillRect(radius - 3, -6.5, 6, 13);
     ctx.strokeStyle = '#2dd4bf';
-    ctx.lineWidth = 0.9;
-    ctx.strokeRect(radius - 3, -5, 5, 10);
+    ctx.lineWidth = 1.1;
+    ctx.strokeRect(radius - 3, -6.5, 6, 13);
 
     if (hasDagger) {
-      // Hilt guard & bolster
+      // Hilt guard & bolster (wider and more prominent)
       ctx.fillStyle = isHit ? '#f87171' : (isLight ? '#0f766e' : '#14b8a6');
-      ctx.fillRect(radius + 2, -5.5, 3.5, 11);
+      ctx.fillRect(radius + 3, -7.5, 4.5, 15);
 
       // Teal textured grip handle
       ctx.fillStyle = isHit ? '#dc2626' : '#0f766e';
-      ctx.fillRect(radius + 5.5, -2.5, 7, 5);
+      ctx.fillRect(radius + 7.5, -3.5, 9, 7);
 
       // Pommel ring
       ctx.fillStyle = '#2dd4bf';
-      ctx.fillRect(radius + 12.5, -3.2, 2.5, 6.4);
+      ctx.fillRect(radius + 16.5, -4.5, 3.5, 9);
 
-      // Razor-sharp double-edged dagger blade
-      const bladeGrad = ctx.createLinearGradient(radius + 3, 0, radius + daggerLen, 0);
+      // Razor-sharp double-edged dagger blade (enlarged)
+      const bladeGrad = ctx.createLinearGradient(radius + 4, 0, radius + daggerLen, 0);
       if (isHit) {
         bladeGrad.addColorStop(0, '#ffffff');
         bladeGrad.addColorStop(1, '#ef4444');
@@ -1181,29 +1528,29 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
 
       ctx.fillStyle = bladeGrad;
       ctx.beginPath();
-      ctx.moveTo(radius + 3, -3.0);
-      ctx.lineTo(radius + daggerLen - 6, -2.8);
+      ctx.moveTo(radius + 4, -4.5);
+      ctx.lineTo(radius + daggerLen - 8, -4.0);
       ctx.lineTo(radius + daggerLen, 0); // razor sharp dagger tip
-      ctx.lineTo(radius + daggerLen - 6, 2.8);
-      ctx.lineTo(radius + 3, 3.0);
+      ctx.lineTo(radius + daggerLen - 8, 4.0);
+      ctx.lineTo(radius + 4, 4.5);
       ctx.closePath();
       ctx.fill();
 
       ctx.strokeStyle = isHit ? '#ef4444' : (isLight ? '#334155' : '#e2e8f0');
-      ctx.lineWidth = isHit ? 1.4 : 1.0;
+      ctx.lineWidth = isHit ? 1.6 : 1.2;
       ctx.stroke();
 
       // Cyan fuller groove in the center of the dagger
       ctx.strokeStyle = '#2dd4bf';
-      ctx.lineWidth = 0.9;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(radius + 6, 0);
-      ctx.lineTo(radius + daggerLen - 8, 0);
+      ctx.moveTo(radius + 7, 0);
+      ctx.lineTo(radius + daggerLen - 10, 0);
       ctx.stroke();
     } else {
       // Empty holster with subtle indicator glow
-      ctx.fillStyle = 'rgba(45, 212, 191, 0.3)';
-      ctx.fillRect(radius + 2, -2, 4, 4);
+      ctx.fillStyle = 'rgba(45, 212, 191, 0.35)';
+      ctx.fillRect(radius + 2, -3, 5, 6);
     }
 
     ctx.restore();
@@ -1301,7 +1648,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
   }
 
   // Rotating gun barrel for Gun Ball
-  if (config.id === BALL_TYPES.GUN) {
+  if (config.id === BALL_TYPES.GUN || config.id === BALL_TYPES.BABY_GUN) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotationAngle);
@@ -1926,6 +2273,218 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
+    // Slow Ball: Heavy reinforced chassis rivets & steel band
+    if (config.id === BALL_TYPES.SLOW) {
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.75, 0, Math.PI * 2);
+      ctx.stroke();
+
+      for (let r = 0; r < 4; r++) {
+        const ang = (r * Math.PI) / 2 + rotationAngle;
+        const rx = x + Math.cos(ang) * (radius * 0.75);
+        const ry = y + Math.sin(ang) * (radius * 0.75);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(rx, ry, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Mother Ball: Cosmic maternal womb ring & orbiting embryonic satellites
+    if (config.id === BALL_TYPES.MOTHER) {
+      ctx.save();
+      ctx.clip();
+      const now = performance.now() * 0.003;
+
+      // Pulsating maternal womb circle in center
+      const wombR = radius * (0.42 + Math.sin(now * 3) * 0.04);
+      ctx.strokeStyle = '#f472b6';
+      ctx.lineWidth = 2.4;
+      ctx.shadowColor = '#ec4899';
+      ctx.shadowBlur = extraData?.isSpawningBrood ? 16 : 8;
+      ctx.beginPath();
+      ctx.arc(x, y, wombR, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner womb core glow
+      ctx.fillStyle = extraData?.isSpawningBrood ? 'rgba(239, 68, 68, 0.45)' : 'rgba(244, 114, 182, 0.25)';
+      ctx.beginPath();
+      ctx.arc(x, y, wombR * 0.75, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3 orbiting embryonic baby dots around the womb representing the 3 varieties
+      for (let i = 0; i < 3; i++) {
+        const dotAng = (now * 1.4) + (i * Math.PI * 2) / 3;
+        const dotDist = radius * 0.68;
+        const dx = x + Math.cos(dotAng) * dotDist;
+        const dy = y + Math.sin(dotAng) * dotDist;
+        const dotColors = ['#93c5fd', '#fca5a5', '#fde047'];
+        ctx.fillStyle = dotColors[i];
+        ctx.shadowColor = dotColors[i];
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(dx, dy, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    // Priest Ball: Divine radiant cross and holy halo
+    if (config.id === BALL_TYPES.PRIEST) {
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = '#fde047';
+      ctx.shadowBlur = 8;
+
+      // Radiant holy cross on priest vestment
+      const cSize = radius * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(x, y - cSize);
+      ctx.lineTo(x, y + cSize);
+      ctx.moveTo(x - cSize * 0.65, y - cSize * 0.15);
+      ctx.lineTo(x + cSize * 0.65, y - cSize * 0.15);
+      ctx.stroke();
+
+      // Golden halo ring
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.72, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    // Push Ball: Kinetic repulsor rings & spinning outward directional force emitter chevrons
+    if (config.id === BALL_TYPES.PUSH) {
+      ctx.save();
+      ctx.clip();
+      const now = performance.now() * 0.003;
+      // Pattern spin: smoothly rotates continuously with physics angle or time
+      const spin = rotationAngle !== undefined && rotationAngle !== 0 ? rotationAngle : (now * 1.5);
+
+      // Concentric kinetic shockwave ripples inside body
+      for (let r = 1; r <= 3; r++) {
+        const ringProg = (now * 0.8 + r / 3) % 1;
+        const ringR = radius * ringProg * 0.85;
+        const alpha = (1 - ringProg) * 0.55;
+        ctx.strokeStyle = `rgba(165, 180, 252, ${alpha})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(x, y, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Spinning curved kinetic vortex arcs
+      ctx.strokeStyle = extraData?.hasPushCharge ? '#c7d2fe' : 'rgba(199, 210, 254, 0.7)';
+      ctx.lineWidth = 1.8;
+      for (let dir = 0; dir < 4; dir++) {
+        const baseAng = (dir * Math.PI) / 2 + spin;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.58, baseAng, baseAng + 0.65);
+        ctx.stroke();
+      }
+
+      // Outward 4-direction spinning repulsor force chevrons
+      ctx.strokeStyle = extraData?.hasPushCharge ? '#ffffff' : '#c7d2fe';
+      ctx.lineWidth = 2.2;
+      for (let dir = 0; dir < 4; dir++) {
+        const ang = (dir * Math.PI) / 2 + spin;
+        const tipDist = radius * 0.74;
+        const tx = x + Math.cos(ang) * tipDist;
+        const ty = y + Math.sin(ang) * tipDist;
+        const wingAng1 = ang + 2.5;
+        const wingAng2 = ang - 2.5;
+        ctx.beginPath();
+        ctx.moveTo(tx + Math.cos(wingAng1) * 6, ty + Math.sin(wingAng1) * 6);
+        ctx.lineTo(tx, ty);
+        ctx.lineTo(tx + Math.cos(wingAng2) * 6, ty + Math.sin(wingAng2) * 6);
+        ctx.stroke();
+      }
+
+      // Central kinetic core with glowing pulsing energy
+      ctx.fillStyle = extraData?.hasPushCharge ? '#c7d2fe' : '#818cf8';
+      ctx.shadowColor = extraData?.hasPushCharge ? '#a5b4fc' : '#6366f1';
+      ctx.shadowBlur = extraData?.hasPushCharge ? 16 : 8;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * (extraData?.hasPushCharge ? 0.30 : 0.22), 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spinning micro-cross in core
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - Math.cos(spin) * 5, y - Math.sin(spin) * 5);
+      ctx.lineTo(x + Math.cos(spin) * 5, y + Math.sin(spin) * 5);
+      ctx.moveTo(x - Math.cos(spin + Math.PI / 2) * 5, y - Math.sin(spin + Math.PI / 2) * 5);
+      ctx.lineTo(x + Math.cos(spin + Math.PI / 2) * 5, y + Math.sin(spin + Math.PI / 2) * 5);
+      ctx.stroke();
+
+      if (extraData?.hasPushCharge) {
+        ctx.strokeStyle = '#e0e7ff';
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.88 + Math.sin(now * 8) * 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+
+      ctx.restore();
+    }
+
+    // Rapier Ball: Aristocratic duelist sash, golden fencing crest & luminous ruby core
+    if (config.id === BALL_TYPES.RAPIER) {
+      ctx.save();
+      ctx.clip();
+      const isAiming = extraData?.isAiming;
+      const isDashing = extraData?.isDashing;
+
+      // Crimson duelist sash across body
+      ctx.fillStyle = isDashing ? 'rgba(244, 63, 94, 0.45)' : 'rgba(244, 63, 94, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(x - radius, y - radius * 0.4);
+      ctx.lineTo(x + radius, y + radius * 0.4);
+      ctx.lineTo(x + radius, y + radius * 0.7);
+      ctx.lineTo(x - radius, y - radius * 0.1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Golden fencing cross emblem
+      ctx.strokeStyle = isDashing ? '#fbbf24' : (isAiming ? '#f43f5e' : 'rgba(251, 191, 36, 0.75)');
+      ctx.lineWidth = 1.6;
+      ctx.shadowColor = isDashing ? '#fbbf24' : '#f43f5e';
+      ctx.shadowBlur = (isAiming || isDashing) ? 10 : 3;
+
+      const crestR = radius * 0.42;
+      ctx.beginPath();
+      ctx.moveTo(x - crestR, y);
+      ctx.lineTo(x + crestR, y);
+      ctx.moveTo(x, y - crestR);
+      ctx.lineTo(x, y + crestR);
+      ctx.stroke();
+
+      // Central duelist ruby gem
+      ctx.fillStyle = isDashing ? '#ffffff' : (isAiming ? '#fb7185' : '#e11d48');
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
     // Accelerator Ball: Aerodynamic velocity streaks & electric kinetic core
     if (config.id === BALL_TYPES.ACCELERATOR) {
       ctx.save();
@@ -1953,7 +2512,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
 
     // Gun Ball: Tactical crosshair scope reticle & amber center
-    if (config.id === BALL_TYPES.GUN) {
+    if (config.id === BALL_TYPES.GUN || config.id === BALL_TYPES.BABY_GUN) {
       ctx.save();
       ctx.clip();
       ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)'; // tactical amber
@@ -2283,7 +2842,7 @@ function BallThumbnailPreview({ config, theme }) {
     const isFire = config.id === BALL_TYPES.FIRE || config.id === BALL_TYPES.SPIT_FIRE;
     const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
     const previewY = isFire ? 44 : 32;
-    const isSword = config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD;
+    const isSword = config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.RAPIER;
     const rotation = isSword ? -0.4 : ((config.id === BALL_TYPES.KNIFE || config.id === BALL_TYPES.DAGGER) ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (isFire ? 0.35 : 0)))));
     const diceState = config.id === BALL_TYPES.DICE ? { value: 1, isRolling: false, tier: 'low', popScale: 1.0 } : null;
     draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 }, diceState);
@@ -2424,6 +2983,8 @@ function BallBattleGame() {
     trailPoints: [],
     fireTrails: [],
     fireImpacts: [],
+    pushShockwaves: [],
+    blessRings: [],
     conclusionTimer: 0,
     lastTime: 0,
     running: false,
@@ -2574,6 +3135,8 @@ function BallBattleGame() {
         displayHp: b.maxHp,
         shield: 0,
         hasArmor: b.hasArmor || b.config?.hasArmor || b.type === BALL_TYPES.STONE || b.type === BALL_TYPES.SPIKE,
+        hasTower: b.hasTower || b.config?.hasTower || b.type === BALL_TYPES.SLOW,
+        hasHard: b.hasHard || b.config?.hasHard || b.type === BALL_TYPES.STEEL || b.type === BALL_TYPES.STONE,
         hitCount: 0,
         bleedTicksLeft: 0,
         bleedTimer: 0,
@@ -2599,12 +3162,36 @@ function BallBattleGame() {
         knifeSpeed: 0.12,
         knifeHitFreezeTimer: 0,
         daggerAngle: b.angle || 0,
-        daggerCooldown: 1000,
+        daggerSpeed: 0.08,
+        daggerState: 'spinning',
+        daggerDelayTimer: 0,
+        daggerAimTimer: 0,
+        markedEnemyId: null,
+        daggerCooldown: 0,
         hasDagger: b.type === BALL_TYPES.DAGGER,
         isWeaponless: false,
         weaponlessTimer: 0,
-        weaponlessMaxTimer: 7000,
+        weaponlessMaxTimer: 4000,
         stuckDaggers: [],
+        rapierAngle: b.angle || 0,
+        rapierSpeed: 0.055,
+        rapierState: 'spinning',
+        rapierAimTimer: 0,
+        rapierDashTimer: 0,
+        rapierCooldown: 0,
+        markedRapierTargetId: null,
+        dashTimer: 0,
+        rapierMarkTimer: 0,
+        hasPushCharge: false,
+        pushAngle: b.angle || 0,
+        blessTimer: b.type === BALL_TYPES.PRIEST ? (b.config?.blessCooldown || 9000) : 0,
+        blessActiveTimer: 0,
+        broodTimer: b.type === BALL_TYPES.MOTHER ? (b.config?.broodCooldown || 5500) : 0,
+        broodNextType: 'BABY_NORMAL',
+        isSpawningBrood: false,
+        pushActiveTimer: 0,
+        knockbackTimer: 0,
+        daggerMarkTimer: 0,
         isSlowed: false,
         slowTimer: 0,
         spikeAngle: b.angle || 0,
@@ -3162,8 +3749,10 @@ function BallBattleGame() {
             if (owner && !owner.isDead) {
               owner.hasDagger = true;
               owner.isWeaponless = false;
-              owner.weaponlessTimer = 0;
-              owner.daggerCooldown = 600;
+              owner.daggerState = 'spinning';
+              owner.markedEnemyId = null;
+              owner.daggerDelayTimer = 0;
+              owner.daggerAimTimer = 0;
             }
           });
           victim.stuckDaggers = [];
@@ -3218,6 +3807,28 @@ function BallBattleGame() {
           const ft = fireTrails[i];
           ft.life -= ft.decay;
           if (ft.life <= 0) fireTrails.splice(i, 1);
+        }
+      }
+
+      // Update divine blessing aura rings
+      const blessRings = physicsRef.current.blessRings;
+      if (blessRings) {
+        for (let i = blessRings.length - 1; i >= 0; i--) {
+          const br = blessRings[i];
+          br.radius += (br.maxRadius - br.radius) * 0.18;
+          br.life -= br.decay;
+          if (br.life <= 0) blessRings.splice(i, 1);
+        }
+      }
+
+      // Update kinetic push shockwaves
+      const pushShockwaves = physicsRef.current.pushShockwaves;
+      if (pushShockwaves) {
+        for (let i = pushShockwaves.length - 1; i >= 0; i--) {
+          const ps = pushShockwaves[i];
+          ps.radius += (ps.maxRadius - ps.radius) * 0.22;
+          ps.life -= ps.decay;
+          if (ps.life <= 0) pushShockwaves.splice(i, 1);
         }
       }
 
@@ -3287,6 +3898,7 @@ function BallBattleGame() {
       }
 
       const spawnedSplitBalls = [];
+      const spawnedBabyBalls = [];
 
       balls.forEach(ball => {
         if (ball.isDead) return;
@@ -3743,6 +4355,48 @@ function BallBattleGame() {
           ball.shardAngle = ((ball.shardAngle || 0) + 0.035) % (Math.PI * 2);
         }
 
+        // Push Ball: Smooth continuous spin of kinetic repulsor pattern
+        if (ball.type === BALL_TYPES.PUSH) {
+          ball.pushAngle = ((ball.pushAngle || 0) + 0.04) % (Math.PI * 2);
+        }
+
+        // Baby Sword Ball: Spinning mini blade
+        if (ball.type === BALL_TYPES.BABY_SWORD && !ball.isDead && !ball.isDying) {
+          if (ball.swordHitFreezeTimer > 0) {
+            ball.swordHitFreezeTimer = Math.max(0, ball.swordHitFreezeTimer - safeDt * 1000);
+          } else {
+            ball.swordAngle = ((ball.swordAngle || 0) + (ball.swordSpeed || 0.08)) % (Math.PI * 2);
+          }
+        }
+
+        // Baby Gun Ball: Rotating nozzle & shooting mini cannon pellets
+        if (ball.type === BALL_TYPES.BABY_GUN && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          ball.gunAngle = ((ball.gunAngle || 0) + (ball.gunSpeed || 0.05)) % (Math.PI * 2);
+          ball.gunCooldown = (ball.gunCooldown !== undefined ? ball.gunCooldown : 3500) - safeDt * 1000;
+          if (ball.gunCooldown <= 0) {
+            ball.gunCooldown = 3500;
+            const muzzleDist = ball.radius + 12;
+            const mx = ball.x + Math.cos(ball.gunAngle) * muzzleDist;
+            const my = ball.y + Math.sin(ball.gunAngle) * muzzleDist;
+            sound.play('bulletShot', 0.35);
+            spawnParticles(mx, my, '#fbbf24', 6, 1.8);
+            const bulletSpeed = 8.5;
+            physicsRef.current.flyingBullets.push({
+              x: mx,
+              y: my,
+              vx: Math.cos(ball.gunAngle) * bulletSpeed,
+              vy: Math.sin(ball.gunAngle) * bulletSpeed,
+              angle: ball.gunAngle,
+              ownerId: ball.id,
+              ownerTeam: ball.team,
+              ownerBall: ball,
+              damage: ball.config?.bulletDamage || 14,
+              life: 2.2,
+              radius: 3.5,
+            });
+          }
+        }
+
         // Gun Ball: Smooth spin of firearm barrel and 3-second cannon fire
         if (ball.type === BALL_TYPES.GUN && !ball.isDead && !ball.isDying && !isSoloWinner) {
           ball.gunAngle = ((ball.gunAngle || 0) + (ball.gunSpeed || 0.045)) % (Math.PI * 2);
@@ -3904,45 +4558,93 @@ function BallBattleGame() {
           }
         }
 
-        // Dagger Ball: Single Dagger mechanics (aim, throw, 2s recall on miss, 7s recall on hit)
+        // Dagger Ball: spins & bounces, marks on contact, 2s delay, 2s moving aim, throw
         if (ball.type === BALL_TYPES.DAGGER && !ball.isDead && !ball.isDying && !isSoloWinner) {
-          // Decrement weaponless reload timer if weaponless
-          if (ball.isWeaponless && ball.weaponlessTimer > 0) {
-            ball.weaponlessTimer = Math.max(0, ball.weaponlessTimer - safeDt * 1000);
-          }
+          if (ball.daggerState === undefined) ball.daggerState = ball.hasDagger ? 'spinning' : 'weaponless';
+          if (ball.daggerSpeed === undefined) ball.daggerSpeed = 0.08;
 
           const livingEnemies = balls.filter(b => b.team !== ball.team && !b.isDead && !b.isDying);
-          let nearestEnemy = null;
-          let nearestDist = Infinity;
-          livingEnemies.forEach(e => {
-            const d = Math.hypot(e.x - ball.x, e.y - ball.y);
-            if (d < nearestDist) {
-              nearestDist = d;
-              nearestEnemy = e;
-            }
-          });
 
-          if (ball.hasDagger && !ball.isWeaponless) {
-            if (nearestEnemy) {
-              const targetAngle = Math.atan2(nearestEnemy.y - ball.y, nearestEnemy.x - ball.x);
+          // Check marked enemy status
+          let markedEnemy = ball.markedEnemyId ? livingEnemies.find(e => e.id === ball.markedEnemyId) : null;
+          if (ball.markedEnemyId && !markedEnemy) {
+            // Target died: if aiming, try retargeting nearest living enemy; otherwise return to spinning
+            if (ball.daggerState === 'aiming' && livingEnemies.length > 0) {
+              let nearest = null;
+              let minD = Infinity;
+              livingEnemies.forEach(e => {
+                const d = Math.hypot(e.x - ball.x, e.y - ball.y);
+                if (d < minD) { minD = d; nearest = e; }
+              });
+              if (nearest) {
+                ball.markedEnemyId = nearest.id;
+                markedEnemy = nearest;
+                nearest.daggerMarkTimer = ball.daggerAimTimer;
+              } else {
+                ball.daggerState = 'spinning';
+                ball.markedEnemyId = null;
+                const a = Math.random() * Math.PI * 2;
+                ball.vx = Math.cos(a) * (ball.speed || 3);
+                ball.vy = Math.sin(a) * (ball.speed || 3);
+              }
+            } else {
+              ball.daggerState = 'spinning';
+              ball.markedEnemyId = null;
+              if (Math.hypot(ball.vx, ball.vy) < 0.1) {
+                const a = Math.random() * Math.PI * 2;
+                ball.vx = Math.cos(a) * (ball.speed || 3);
+                ball.vy = Math.sin(a) * (ball.speed || 3);
+              }
+            }
+          }
+
+          if (ball.daggerState === 'spinning') {
+            // Spins around and bounces like the others do
+            ball.daggerAngle = ((ball.daggerAngle || 0) + ball.daggerSpeed) % (Math.PI * 2);
+          } else if (ball.daggerState === 'delay') {
+            // 2 seconds after hitting enemy: still moving and spinning
+            ball.daggerAngle = ((ball.daggerAngle || 0) + ball.daggerSpeed) % (Math.PI * 2);
+            ball.daggerDelayTimer = (ball.daggerDelayTimer !== undefined ? ball.daggerDelayTimer : 2000) - safeDt * 1000;
+            if (ball.daggerDelayTimer <= 0) {
+              // 2s elapsed: start aim mode and stop moving!
+              ball.daggerState = 'aiming';
+              ball.daggerAimTimer = 2000; // Aim for 2 seconds
+              ball.vx = 0;
+              ball.vy = 0;
+            }
+          } else if (ball.daggerState === 'aiming') {
+            // Stop moving while aiming!
+            ball.vx = 0;
+            ball.vy = 0;
+            if (markedEnemy) {
+              const targetAngle = Math.atan2(markedEnemy.y - ball.y, markedEnemy.x - ball.x);
               let diff = (targetAngle - (ball.daggerAngle || 0)) % (Math.PI * 2);
               if (diff > Math.PI) diff -= Math.PI * 2;
               if (diff < -Math.PI) diff += Math.PI * 2;
-              ball.daggerAngle = (ball.daggerAngle || 0) + diff * Math.min(1, safeDt * 5.5);
-            } else {
-              ball.daggerAngle = ((ball.daggerAngle || 0) + 0.02) % (Math.PI * 2);
+              ball.daggerAngle = (ball.daggerAngle || 0) + diff * Math.min(1, safeDt * 8.5);
+              ball.aimTargetX = markedEnemy.x;
+              ball.aimTargetY = markedEnemy.y;
+
+              if (Math.random() < 0.25) {
+                spawnParticles(ball.x + Math.cos(ball.daggerAngle) * (ball.radius + 22), ball.y + Math.sin(ball.daggerAngle) * (ball.radius + 22), '#2dd4bf', 1, 0.8);
+              }
             }
 
-            ball.daggerCooldown = (ball.daggerCooldown !== undefined ? ball.daggerCooldown : 1000) - safeDt * 1000;
-            if (ball.daggerCooldown <= 0 && nearestEnemy) {
+            ball.daggerAimTimer = (ball.daggerAimTimer !== undefined ? ball.daggerAimTimer : 2000) - safeDt * 1000;
+            if (ball.daggerAimTimer <= 0) {
+              // Throw the dagger in that direction!
               ball.hasDagger = false;
               ball.isWeaponless = true;
-              ball.weaponlessTimer = 0; // Starts 7s countdown once it hits a target
+              ball.daggerState = 'weaponless';
+              if (markedEnemy) {
+                markedEnemy.daggerMarkTimer = 0;
+              }
 
-              const throwDist = ball.radius + 6;
+              const daggerLen = ball.config?.daggerLength || 44;
+              const throwDist = ball.radius + 8;
               const dx = ball.x + Math.cos(ball.daggerAngle) * throwDist;
               const dy = ball.y + Math.sin(ball.daggerAngle) * throwDist;
-              const daggerSpeed = 13.5;
+              const daggerSpeed = 16.0;
 
               if (!physicsRef.current.flyingDaggers) physicsRef.current.flyingDaggers = [];
               physicsRef.current.flyingDaggers.push({
@@ -3955,66 +4657,378 @@ function BallBattleGame() {
                 ownerId: ball.id,
                 ownerTeam: ball.team,
                 ownerBall: ball,
-                targetId: nearestEnemy.id,
-                damage: ball.config?.daggerDamage || 14,
-                life: 2.0, // 2 seconds forward flight before pulling back if it hits no one
-                state: 'flying', // 'flying' | 'returning'
+                targetId: markedEnemy ? markedEnemy.id : null,
+                damage: ball.config?.daggerDamage || 10,
+                life: 3.0,
+                state: 'flying',
               });
 
               sound.play('daggerThrow', 0.95);
-              spawnParticles(dx, dy, '#2dd4bf', 10, 2.0);
-              spawnParticles(dx, dy, '#e2e8f0', 6, 1.4);
+              spawnParticles(dx, dy, '#2dd4bf', 12, 2.2);
+              spawnParticles(dx, dy, '#e2e8f0', 8, 1.5);
+
+              // Recoil kick to resume movement after throwing
+              const resumeSpd = ball.speed || 3.0;
+              ball.vx = -Math.cos(ball.daggerAngle) * (resumeSpd * 0.85);
+              ball.vy = -Math.sin(ball.daggerAngle) * (resumeSpd * 0.85);
             }
           } else {
-            // Weaponless: slowly idle turn until dagger is retrieved
+            // Weaponless: idle slow turn of empty sheath
             ball.daggerAngle = ((ball.daggerAngle || 0) + 0.02) % (Math.PI * 2);
           }
         }
 
-        // Stuck Daggers on victim: 7 seconds timer, then pull out and return to Dagger Ball
-        if (ball.stuckDaggers && ball.stuckDaggers.length > 0 && !ball.isDead && !ball.isDying) {
-          for (let dIdx = ball.stuckDaggers.length - 1; dIdx >= 0; dIdx--) {
-            const d = ball.stuckDaggers[dIdx];
-            d.timer -= safeDt * 1000;
-            if (d.timer <= 0) {
-              // 7 seconds elapsed! Dagger pulls out from victim body!
-              sound.play('daggerPull', 0.95);
-              ball.stuckDaggers.splice(dIdx, 1);
-              if (ball.stuckDaggers.length === 0) {
-                ball.isSlowed = false;
+        // Priest Ball: Blessing Canvas-wide AOE Heal after 9s (divided by number of allies)
+        if (ball.type === BALL_TYPES.PRIEST && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          const blessCooldown = ball.config?.blessCooldown || 9000;
+          const totalPool = ball.config?.blessPool || 24;
+
+          if (ball.blessTimer === undefined) ball.blessTimer = blessCooldown;
+          ball.blessTimer = Math.max(0, ball.blessTimer - safeDt * 1000);
+
+          if (ball.blessTimer <= 0) {
+            ball.blessTimer = blessCooldown;
+            ball.blessActiveTimer = 1500;
+
+            sound.playBless(0.95);
+
+            // Find all living allies across the ENTIRE canvas
+            const livingAllies = balls.filter(other => other.team === ball.team && other.id !== ball.id && !other.isDead && !other.isDying);
+
+            // Heal is divided evenly among beneficiaries (self + all living allies across canvas)
+            const recipientCount = 1 + livingAllies.length;
+            const healAmount = Math.max(4, Math.round(totalPool / recipientCount));
+
+            // Heal self
+            if (ball.hp < ball.maxHp) {
+              const prev = ball.hp;
+              ball.hp = Math.min(ball.maxHp, ball.hp + healAmount);
+              const actual = ball.hp - prev;
+              if (actual > 0) spawnHealText(ball.x, ball.y, actual);
+            }
+            ball.healFlashTimer = 500;
+            spawnParticles(ball.x, ball.y, '#fde047', 16, 2.2);
+            spawnParticles(ball.x, ball.y, '#34d399', 10, 1.6);
+
+            // Heal all living allies across the canvas
+            livingAllies.forEach(ally => {
+              if (ally.hp < ally.maxHp) {
+                const prev = ally.hp;
+                ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
+                const actual = ally.hp - prev;
+                if (actual > 0) spawnHealText(ally.x, ally.y, actual);
+              }
+              ally.healFlashTimer = 500;
+              spawnParticles(ally.x, ally.y, '#fde047', 12, 2.0);
+              spawnParticles(ally.x, ally.y, '#34d399', 8, 1.4);
+            });
+
+            // Divine blessing expanding ring across entire canvas
+            if (!physicsRef.current.blessRings) physicsRef.current.blessRings = [];
+            physicsRef.current.blessRings.push({
+              x: ball.x,
+              y: ball.y,
+              radius: ball.radius,
+              maxRadius: 1100,
+              life: 1.0,
+              decay: 0.015,
+            });
+          }
+        }
+
+        if (ball.blessActiveTimer > 0) {
+          ball.blessActiveTimer = Math.max(0, ball.blessActiveTimer - safeDt * 1000);
+        }
+
+        // Push Ball: Conditional kinetic repulsor pulse (requires 1 hit to charge)
+        if (ball.type === BALL_TYPES.PUSH && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          const pushRadius = ball.config?.pushRadius || 130;
+          const pushForce = ball.config?.pushForce || 10.5;
+          const pushDamage = ball.config?.pushDamage || 6;
+
+          const livingEnemies = balls.filter(other => other.team !== ball.team && !other.isDead && !other.isDying);
+          const nearbyEnemies = livingEnemies.filter(e => {
+            const d = Math.hypot(e.x - ball.x, e.y - ball.y);
+            return d < (ball.radius + pushRadius);
+          });
+
+          // Trigger shockwave when Push Ball has a charge and enemies are within range
+          if (ball.hasPushCharge && nearbyEnemies.length > 0) {
+            // Consume the charge! Needs to hit another enemy to charge again
+            ball.hasPushCharge = false;
+            ball.pushActiveTimer = 1000;
+
+            // Play random push variety SFX
+            sound.playPush(0.95);
+
+            // Spawn expanding kinetic shockwave visual
+            if (!physicsRef.current.pushShockwaves) physicsRef.current.pushShockwaves = [];
+            physicsRef.current.pushShockwaves.push({
+              x: ball.x,
+              y: ball.y,
+              radius: ball.radius,
+              maxRadius: ball.radius + pushRadius,
+              life: 1.0,
+              decay: 0.05,
+              color: '#6366f1'
+            });
+
+            // Push each nearby enemy away violently and inflict Knockback + Damage (Tower effect is immune)
+            nearbyEnemies.forEach(enemy => {
+              const isTower = enemy.type === BALL_TYPES.SLOW || enemy.hasTower || enemy.config?.hasTower;
+              const dx = enemy.x - ball.x;
+              const dy = enemy.y - ball.y;
+              const dist = Math.hypot(dx, dy) || 1;
+              const nx = dx / dist;
+              const ny = dy / dist;
+
+              // If enemy has Tower effect, it is immune to push displacement and knockback!
+              if (!isTower) {
+                enemy.vx = nx * pushForce;
+                enemy.vy = ny * pushForce;
+                enemy.knockbackTimer = 1500;
               }
 
-              // Deal +4 pull rip damage to the victim
-              const ownerBall = balls.find(b => b.id === d.ownerId);
-              applyDamage(ball, 4, ownerBall || ball, false);
-              spawnParticles(ball.x, ball.y, '#2dd4bf', 10, 1.8);
-              spawnParticles(ball.x, ball.y, '#ef4444', 8, 1.5);
+              // Apply damage
+              applyDamage(enemy, pushDamage, ball, false);
 
-              // Spawn returning flying dagger zooming back to owner
-              if (!physicsRef.current.flyingDaggers) physicsRef.current.flyingDaggers = [];
-              physicsRef.current.flyingDaggers.push({
-                id: Math.random(),
-                x: ball.x,
-                y: ball.y,
-                vx: 0,
-                vy: 0,
-                angle: 0,
-                ownerId: d.ownerId,
-                ownerTeam: ownerBall ? ownerBall.team : ball.team,
-                ownerBall: ownerBall,
-                damage: 0,
-                life: 3.0,
-                state: 'returning',
-              });
+              // Kinetic shockwave impact particles
+              spawnParticles(enemy.x, enemy.y, isTower ? '#94a3b8' : '#818cf8', 10, 2.0);
+              spawnParticles(enemy.x, enemy.y, isTower ? '#cbd5e1' : '#c7d2fe', 6, 1.4);
+            });
+          }
+        }
+
+        // Countdown Push active timer on Push Ball
+        if (ball.pushActiveTimer > 0) {
+          ball.pushActiveTimer = Math.max(0, ball.pushActiveTimer - safeDt * 1000);
+        }
+
+        // Countdown Knockback timer on victim
+        if (ball.knockbackTimer > 0) {
+          ball.knockbackTimer = Math.max(0, ball.knockbackTimer - safeDt * 1000);
+        }
+
+        // Dagger Mark countdown on victim
+        if (ball.daggerMarkTimer > 0) {
+          ball.daggerMarkTimer = Math.max(0, ball.daggerMarkTimer - safeDt * 1000);
+        }
+
+        // Rapier Mark countdown on victim
+        if (ball.rapierMarkTimer > 0) {
+          ball.rapierMarkTimer = Math.max(0, ball.rapierMarkTimer - safeDt * 1000);
+        }
+
+        // Rapier Ball: Normal spin, marks on hit, aims for 0.8s, dashes with 28 DMG thrust
+        if (ball.type === BALL_TYPES.RAPIER && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          if (ball.rapierCooldown > 0) {
+            ball.rapierCooldown = Math.max(0, ball.rapierCooldown - safeDt * 1000);
+          }
+          if (ball.dashTimer > 0) {
+            ball.dashTimer = Math.max(0, ball.dashTimer - safeDt * 1000);
+          }
+
+          const livingEnemies = balls.filter(b => b.team !== ball.team && !b.isDead && !b.isDying);
+          let markedEnemy = ball.markedRapierTargetId ? livingEnemies.find(e => e.id === ball.markedRapierTargetId) : null;
+
+          if (ball.rapierState === 'spinning') {
+            ball.rapierAngle = ((ball.rapierAngle || 0) + (ball.rapierSpeed || 0.055)) % (Math.PI * 2);
+          } else if (ball.rapierState === 'aiming') {
+            ball.vx = 0;
+            ball.vy = 0;
+            if (!markedEnemy) {
+              if (livingEnemies.length > 0) {
+                let nearest = livingEnemies[0];
+                let minD = Math.hypot(nearest.x - ball.x, nearest.y - ball.y);
+                for (let i = 1; i < livingEnemies.length; i++) {
+                  const d = Math.hypot(livingEnemies[i].x - ball.x, livingEnemies[i].y - ball.y);
+                  if (d < minD) { minD = d; nearest = livingEnemies[i]; }
+                }
+                ball.markedRapierTargetId = nearest.id;
+                markedEnemy = nearest;
+                nearest.rapierMarkTimer = ball.rapierAimTimer;
+              } else {
+                ball.rapierState = 'spinning';
+                ball.markedRapierTargetId = null;
+                ball.rapierCooldown = 1200;
+              }
+            }
+
+            if (markedEnemy) {
+              const targetAngle = Math.atan2(markedEnemy.y - ball.y, markedEnemy.x - ball.x);
+              let diff = (targetAngle - (ball.rapierAngle || 0)) % (Math.PI * 2);
+              if (diff > Math.PI) diff -= Math.PI * 2;
+              if (diff < -Math.PI) diff += Math.PI * 2;
+              ball.rapierAngle = (ball.rapierAngle || 0) + diff * Math.min(1, safeDt * 14);
+
+              if (Math.random() < 0.3) {
+                const tipDist = ball.radius + (ball.config?.rapierLength || 58);
+                spawnParticles(ball.x + Math.cos(ball.rapierAngle) * tipDist, ball.y + Math.sin(ball.rapierAngle) * tipDist, '#f43f5e', 1, 0.8);
+              }
+            }
+
+            ball.rapierAimTimer = (ball.rapierAimTimer !== undefined ? ball.rapierAimTimer : 800) - safeDt * 1000;
+            if (ball.rapierAimTimer <= 0) {
+              // Launch forward lightning dash thrust!
+              ball.rapierState = 'dashing';
+              const dashSpeed = ball.config?.dashSpeed || 17.5;
+              const launchAngle = ball.rapierAngle || 0;
+              ball.vx = Math.cos(launchAngle) * dashSpeed;
+              ball.vy = Math.sin(launchAngle) * dashSpeed;
+              ball.rapierDashTimer = ball.config?.dashDuration || 350;
+              ball.dashTimer = 450;
+              sound.play('bulletShot', 0.4);
+              spawnParticles(ball.x, ball.y, '#f43f5e', 12, 2.2);
+            }
+          } else if (ball.rapierState === 'dashing') {
+            const curSpeed = Math.hypot(ball.vx, ball.vy);
+            if (curSpeed > 0.1) {
+              ball.rapierAngle = Math.atan2(ball.vy, ball.vx);
+            }
+            ball.rapierDashTimer = (ball.rapierDashTimer !== undefined ? ball.rapierDashTimer : 350) - safeDt * 1000;
+            if (Math.random() < 0.6) {
+              spawnParticles(ball.x - ball.vx * 0.4, ball.y - ball.vy * 0.4, '#f43f5e', 2, 0.6);
+            }
+            if (ball.rapierDashTimer <= 0) {
+              ball.rapierState = 'spinning';
+              ball.rapierCooldown = ball.config?.rapierCooldown || 2800;
+              ball.markedRapierTargetId = null;
+              ball.dashTimer = 0;
+              if (curSpeed > 0.1) {
+                ball.vx = (ball.vx / curSpeed) * (ball.speed || 2.3);
+                ball.vy = (ball.vy / curSpeed) * (ball.speed || 2.3);
+              }
             }
           }
         }
 
-        if (!isSoloWinner) {
+        // Mother Ball: Brood Birthing (Very slow, stops moving while birthing, costs 5 HP, cycles 3 baby types)
+        if (ball.type === BALL_TYPES.MOTHER && !ball.isDead && !ball.isDying && !isSoloWinner) {
+          const broodCooldown = ball.config?.broodCooldown || 5500;
+          const broodMaxCap = ball.config?.broodMaxCap || 3;
+          const hpCost = ball.config?.broodHpCost || 5;
+
+          if (ball.broodTimer === undefined) ball.broodTimer = broodCooldown;
+          if (!ball.broodNextType) ball.broodNextType = 'BABY_NORMAL';
+
+          const activeBabies = balls.filter(b => b.motherId === ball.id && !b.isDead && !b.isDying);
+
+          if (activeBabies.length < broodMaxCap) {
+            ball.broodTimer = Math.max(0, ball.broodTimer - safeDt * 1000);
+
+            // While in the last 1.2s of birthing, Mother Ball slows down and stops moving
+            if (ball.broodTimer <= 1200) {
+              ball.isSpawningBrood = true;
+              ball.vx *= 0.85;
+              ball.vy *= 0.85;
+              if (Math.random() < 0.3) {
+                spawnParticles(ball.x, ball.y, '#f472b6', 2, 1.2);
+              }
+            } else {
+              ball.isSpawningBrood = false;
+            }
+
+            // Birth triggered!
+            if (ball.broodTimer <= 0) {
+              ball.broodTimer = broodCooldown;
+              ball.isSpawningBrood = false;
+
+              // Spawning a baby ball takes 5 HP
+              const actualCost = Math.min(ball.hp - 1, hpCost);
+              if (actualCost > 0) {
+                ball.hp -= actualCost;
+                spawnDamageText(ball.x, ball.y - ball.radius - 8, actualCost, false, false, false);
+                ball.hitFlashTimer = 220;
+              }
+
+              const babyType = BALL_TYPES[ball.broodNextType] || BALL_TYPES.BABY_NORMAL;
+              const babyCfg = BALL_CONFIGS[babyType] || BALL_CONFIGS[BALL_TYPES.BABY_NORMAL];
+
+              // Cycle sequence: BABY_NORMAL -> BABY_SWORD -> BABY_GUN -> BABY_NORMAL
+              if (ball.broodNextType === 'BABY_NORMAL') ball.broodNextType = 'BABY_SWORD';
+              else if (ball.broodNextType === 'BABY_SWORD') ball.broodNextType = 'BABY_GUN';
+              else ball.broodNextType = 'BABY_NORMAL';
+
+              const birthAngle = Math.random() * Math.PI * 2;
+              const spawnDist = ball.radius + babyCfg.radius + 6;
+              const bx = Math.max(babyCfg.radius + 6, Math.min(CANVAS_SIZE - babyCfg.radius - 6, ball.x + Math.cos(birthAngle) * spawnDist));
+              const by = Math.max(babyCfg.radius + 6, Math.min(CANVAS_SIZE - babyCfg.radius - 6, ball.y + Math.sin(birthAngle) * spawnDist));
+              const launchSpd = babyCfg.speed * 1.3;
+
+              const newBaby = {
+                id: Date.now() + Math.random(),
+                team: ball.team,
+                teamColor: ball.teamColor,
+                type: babyType,
+                name: babyCfg.name,
+                x: bx,
+                y: by,
+                vx: Math.cos(birthAngle) * launchSpd,
+                vy: Math.sin(birthAngle) * launchSpd,
+                hp: babyCfg.baseHp,
+                maxHp: babyCfg.baseHp,
+                displayHp: babyCfg.baseHp,
+                radius: babyCfg.radius,
+                mass: babyCfg.mass,
+                speed: babyCfg.speed,
+                damage: babyCfg.damage,
+                config: babyCfg,
+                motherId: ball.id,
+                isBaby: true,
+                hitCount: 0,
+                bleedTicksLeft: 0,
+                bleedTimer: 0,
+                bleedSource: null,
+                bleedQueue: [],
+                burnTicksLeft: 0,
+                burnTimer: 0,
+                burnSource: null,
+                burnQueue: [],
+                isBlueBurn: false,
+                burnFlashTimer: 0,
+                isDead: false,
+                isDying: false,
+                deathTimer: 0,
+                deathMaxTimer: 0,
+                hitFlashTimer: 0,
+                hitShakeTimer: 0,
+                invulnerableTimer: 200,
+                swordAngle: birthAngle,
+                swordSpeed: 0.08,
+                swordHitFreezeTimer: 0,
+                hasSword: babyType === BALL_TYPES.BABY_SWORD,
+                bladeLength: babyCfg.bladeLength || 26,
+                bladeDamage: babyCfg.bladeDamage || 12,
+                gunAngle: birthAngle,
+                gunSpeed: 0.05,
+                gunCooldown: babyCfg.gunCooldown || 3500,
+                hasGun: babyType === BALL_TYPES.BABY_GUN,
+              };
+
+              spawnedBabyBalls.push(newBaby);
+
+              sound.play('fastballHit', 0.85);
+              spawnParticles(bx, by, '#f472b6', 14, 2.2);
+              spawnParticles(bx, by, '#ffffff', 8, 1.5);
+              spawnParticles(ball.x, ball.y, '#fbcfe8', 10, 1.8);
+
+              // Mother ball slight recoil kick
+              ball.vx = -Math.cos(birthAngle) * 1.2;
+              ball.vy = -Math.sin(birthAngle) * 1.2;
+            }
+          } else {
+            ball.isSpawningBrood = false;
+          }
+        }
+
+        if (ball.isSpawningBrood) {
+          ball.vx = 0;
+          ball.vy = 0;
+        } else if (!isSoloWinner) {
           const curSpd = Math.hypot(ball.vx, ball.vy);
           const baseSpd = ball.speed;
-          // Slow debuff: Reduces Movement Speed by 20%
-          const targetSpd = ball.isSlowed ? baseSpd * 0.8 : baseSpd;
+          // Slow debuff: Reduces Movement Speed by 25%
+          const targetSpd = ball.isSlowed ? baseSpd * 0.75 : baseSpd;
           if (curSpd > 0.001) {
             const lerpedSpd = curSpd + (targetSpd - curSpd) * 0.06;
             ball.vx = (ball.vx / curSpd) * lerpedSpd;
@@ -4109,6 +5123,11 @@ function BallBattleGame() {
 
       if (spawnedSplitBalls.length > 0) {
         balls.push(...spawnedSplitBalls);
+        activeBalls.push(...spawnedSplitBalls);
+      }
+      if (spawnedBabyBalls.length > 0) {
+        balls.push(...spawnedBabyBalls);
+        activeBalls.push(...spawnedBabyBalls);
       }
 
       // Collisions
@@ -4417,16 +5436,89 @@ function BallBattleGame() {
                 }
               }
 
+              // Hammer Ball deals twice the damage when hitting Steel Ball, Stone Ball, or Spike Ball
+              if (b1.type === BALL_TYPES.HAMMER && (b2.type === BALL_TYPES.STEEL || b2.type === BALL_TYPES.STONE || b2.type === BALL_TYPES.SPIKE || b2.hasHard)) {
+                dmgB1ToB2 *= 2;
+              }
+              if (b2.type === BALL_TYPES.HAMMER && (b1.type === BALL_TYPES.STEEL || b1.type === BALL_TYPES.STONE || b1.type === BALL_TYPES.SPIKE || b1.hasHard)) {
+                dmgB2ToB1 *= 2;
+              }
+
               applyDamage(b2, dmgB1ToB2, b1);
               applyDamage(b1, dmgB2ToB1, b2);
+
+              // Push Ball: hitting an enemy grants 1 Push Charge
+              if (b1.type === BALL_TYPES.PUSH && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
+                if (!b1.hasPushCharge) {
+                  b1.hasPushCharge = true;
+                  spawnParticles(b1.x, b1.y, '#818cf8', 8, 1.5);
+                }
+              }
+              if (b2.type === BALL_TYPES.PUSH && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
+                if (!b2.hasPushCharge) {
+                  b2.hasPushCharge = true;
+                  spawnParticles(b2.x, b2.y, '#818cf8', 8, 1.5);
+                }
+              }
+
+              // Dagger Ball Body hit marks enemy with Dagger Mark using bodyHit sound
+              if (b1.type === BALL_TYPES.DAGGER && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
+                applyDaggerMark(b1, b2, true);
+              }
+              if (b2.type === BALL_TYPES.DAGGER && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
+                applyDaggerMark(b2, b1, true);
+              }
+
+              // Rapier Ball Body hit: dashes deliver thrust impact, while spinning marks target
+              if (b1.type === BALL_TYPES.RAPIER && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
+                if (b1.rapierState === 'dashing') {
+                  const thrustDmg = b1.config?.dashDamage || 28;
+                  applyDamage(b2, thrustDmg, b1, true);
+                  b2.rapierMarkTimer = 0;
+                  b2.vx += Math.cos(b1.rapierAngle) * 7.5;
+                  b2.vy += Math.sin(b1.rapierAngle) * 7.5;
+                  sound.play('swordHit', 1.0);
+                  spawnParticles(b2.x, b2.y, '#f43f5e', 12, 2.2);
+                  b1.rapierState = 'spinning';
+                  b1.rapierCooldown = b1.config?.rapierCooldown || 2800;
+                  b1.markedRapierTargetId = null;
+                  b1.dashTimer = 0;
+                } else if (b1.rapierState === 'spinning' && (b1.rapierCooldown || 0) <= 0) {
+                  applyRapierMark(b1, b2);
+                }
+              }
+              if (b2.type === BALL_TYPES.RAPIER && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
+                if (b2.rapierState === 'dashing') {
+                  const thrustDmg = b2.config?.dashDamage || 28;
+                  applyDamage(b1, thrustDmg, b2, true);
+                  b1.rapierMarkTimer = 0;
+                  b1.vx += Math.cos(b2.rapierAngle) * 7.5;
+                  b1.vy += Math.sin(b2.rapierAngle) * 7.5;
+                  sound.play('swordHit', 1.0);
+                  spawnParticles(b1.x, b1.y, '#f43f5e', 12, 2.2);
+                  b2.rapierState = 'spinning';
+                  b2.rapierCooldown = b2.config?.rapierCooldown || 2800;
+                  b2.markedRapierTargetId = null;
+                  b2.dashTimer = 0;
+                } else if (b2.rapierState === 'spinning' && (b2.rapierCooldown || 0) <= 0) {
+                  applyRapierMark(b2, b1);
+                }
+              }
             }
           }
 
-          if ((b1.type === BALL_TYPES.SWORD || b1.type === BALL_TYPES.DUAL_SWORD) && b1.team !== b2.team && !b2.isDead) {
+          if ((b1.type === BALL_TYPES.SWORD || b1.type === BALL_TYPES.DUAL_SWORD || b1.type === BALL_TYPES.BABY_SWORD) && b1.team !== b2.team && !b2.isDead) {
             checkSwordHit(b1, b2);
           }
-          if ((b2.type === BALL_TYPES.SWORD || b2.type === BALL_TYPES.DUAL_SWORD) && b2.team !== b1.team && !b1.isDead) {
+          if ((b2.type === BALL_TYPES.SWORD || b2.type === BALL_TYPES.DUAL_SWORD || b2.type === BALL_TYPES.BABY_SWORD) && b2.team !== b1.team && !b1.isDead) {
             checkSwordHit(b2, b1);
+          }
+
+          if (b1.type === BALL_TYPES.RAPIER && b1.team !== b2.team && !b2.isDead) {
+            checkRapierHit(b1, b2);
+          }
+          if (b2.type === BALL_TYPES.RAPIER && b2.team !== b1.team && !b1.isDead) {
+            checkRapierHit(b2, b1);
           }
 
           if (b1.type === BALL_TYPES.KNIFE && b1.team !== b2.team && !b2.isDead) {
@@ -4443,7 +5535,7 @@ function BallBattleGame() {
             checkHammerHit(b2, b1);
           }
 
-          // Dagger Ball: Body collision rips the dagger back out of the victim early
+          // Dagger Ball: Weapon blade collision & stuck dagger retrieval
           const checkDaggerRetrieval = (daggerOwner, victim) => {
             if (daggerOwner.type === BALL_TYPES.DAGGER && victim.stuckDaggers && victim.stuckDaggers.length > 0) {
               const myStuckIdx = victim.stuckDaggers.findIndex(d => d.ownerId === daggerOwner.id);
@@ -4454,15 +5546,17 @@ function BallBattleGame() {
                 }
                 daggerOwner.hasDagger = true;
                 daggerOwner.isWeaponless = false;
-                daggerOwner.weaponlessTimer = 0;
-                daggerOwner.daggerCooldown = 600;
+                daggerOwner.daggerState = 'spinning';
+                daggerOwner.markedEnemyId = null;
+                daggerOwner.daggerDelayTimer = 0;
+                daggerOwner.daggerAimTimer = 0;
 
                 // Deal +6 bonus retrieval damage on rip out
                 applyDamage(victim, 6, daggerOwner, true);
 
                 sound.play('daggerPull', 0.95);
                 spawnDamageText(victim.x, victim.y, 6, true, false, false);
-                spawnParticles(victim.x, victim.y, '#2dd4bf', 12, 2.2);
+                spawnParticles(victim.x, victim.y, '#2dd4bf', 14, 2.4);
                 spawnParticles(victim.x, victim.y, '#ef4444', 10, 1.8);
                 spawnParticles(daggerOwner.x, daggerOwner.y, '#2dd4bf', 8, 1.5);
               }
@@ -4470,9 +5564,11 @@ function BallBattleGame() {
           };
 
           if (b1.type === BALL_TYPES.DAGGER && b1.team !== b2.team && !b2.isDead) {
+            checkDaggerBladeHit(b1, b2);
             checkDaggerRetrieval(b1, b2);
           }
           if (b2.type === BALL_TYPES.DAGGER && b2.team !== b1.team && !b1.isDead) {
+            checkDaggerBladeHit(b2, b1);
             checkDaggerRetrieval(b2, b1);
           }
         }
@@ -4797,25 +5893,27 @@ function BallBattleGame() {
           const owner = balls.find(b => b.id === fd.ownerId) || fd.ownerBall;
 
           if (fd.state === 'returning') {
-            // Homing return flight pulling back to Dagger Ball
+            // Homing return flight pulling back to Dagger Ball via telekinesis
             if (owner && !owner.isDead) {
               const dx = owner.x - fd.x;
               const dy = owner.y - fd.y;
               const dist = Math.hypot(dx, dy);
 
-              if (dist <= owner.radius + 14) {
-                // Caught and pulled back into holster!
+              if (dist <= owner.radius + 16) {
+                // Caught and pulled back into holster! Re-arms Dagger Ball
                 sound.play('daggerPull', 0.85);
                 owner.hasDagger = true;
                 owner.isWeaponless = false;
-                owner.weaponlessTimer = 0;
-                owner.daggerCooldown = 600;
-                spawnParticles(owner.x, owner.y, '#2dd4bf', 10, 1.8);
+                owner.daggerState = 'spinning';
+                owner.markedEnemyId = null;
+                owner.daggerDelayTimer = 0;
+                owner.daggerAimTimer = 0;
+                spawnParticles(owner.x, owner.y, '#2dd4bf', 12, 2.0);
                 flyingDaggers.splice(i, 1);
                 continue;
               }
 
-              const retSpd = 16.5;
+              const retSpd = 17.5;
               fd.vx = (dx / dist) * retSpd;
               fd.vy = (dy / dist) * retSpd;
               fd.x += fd.vx;
@@ -4826,28 +5924,30 @@ function BallBattleGame() {
               continue;
             }
           } else if (fd.state === 'stuck_wall') {
-            // Embedded in arena wall: stays there until retrieved or 2s timer pulls it back
-            fd.wallTimer = (fd.wallTimer !== undefined ? fd.wallTimer : 2000) - safeDt * 1000;
+            // Embedded in arena wall: stays there for 4 seconds, or early pickup on physical contact
+            fd.wallTimer = (fd.wallTimer !== undefined ? fd.wallTimer : 4000) - safeDt * 1000;
 
             // Early retrieval if Dagger Ball physically touches the stuck wall dagger
             if (owner && !owner.isDead) {
               const dist = Math.hypot(owner.x - fd.x, owner.y - fd.y);
-              if (dist <= owner.radius + 14) {
+              if (dist <= owner.radius + 16) {
                 sound.play('daggerPull', 0.9);
                 owner.hasDagger = true;
                 owner.isWeaponless = false;
-                owner.weaponlessTimer = 0;
-                owner.daggerCooldown = 600;
-                spawnParticles(fd.x, fd.y, '#2dd4bf', 10, 1.8);
+                owner.daggerState = 'spinning';
+                owner.markedEnemyId = null;
+                owner.daggerDelayTimer = 0;
+                owner.daggerAimTimer = 0;
+                spawnParticles(fd.x, fd.y, '#2dd4bf', 12, 2.0);
                 flyingDaggers.splice(i, 1);
                 continue;
               }
             }
 
-            // After 2 seconds in the wall, Dagger Pull calls the dagger back
+            // After 4 seconds on the wall, telekinesis pulls the dagger back
             if (fd.wallTimer <= 0) {
               sound.play('daggerPull', 0.95);
-              spawnParticles(fd.x, fd.y, '#2dd4bf', 6, 1.4);
+              spawnParticles(fd.x, fd.y, '#2dd4bf', 8, 1.6);
               fd.state = 'returning';
             }
             continue;
@@ -4858,7 +5958,7 @@ function BallBattleGame() {
             fd.y += fd.vy;
             fd.angle = Math.atan2(fd.vy, fd.vx);
 
-            // Thrown dagger does NOT bounce: sticks firmly into arena wall when hit
+            // Thrown dagger sticks firmly into arena wall when missed
             const minW = 12;
             const maxW = CANVAS_SIZE - 12;
             if (fd.x <= minW || fd.x >= maxW || fd.y <= minW || fd.y >= maxW) {
@@ -4867,10 +5967,10 @@ function BallBattleGame() {
               fd.vx = 0;
               fd.vy = 0;
               fd.state = 'stuck_wall';
-              fd.wallTimer = 2000;
-              sound.play('daggerHit', 0.9);
-              spawnParticles(fd.x, fd.y, '#2dd4bf', 8, 1.6);
-              spawnParticles(fd.x, fd.y, '#e2e8f0', 5, 1.2);
+              fd.wallTimer = 4000; // 4 seconds upon hit to the wall
+              sound.play('daggerHitWall', 0.95);
+              spawnParticles(fd.x, fd.y, '#2dd4bf', 10, 1.8);
+              spawnParticles(fd.x, fd.y, '#e2e8f0', 6, 1.3);
               continue;
             }
 
@@ -4880,11 +5980,11 @@ function BallBattleGame() {
               const enemy = activeBalls[bIdx];
               if (enemy.team !== fd.ownerTeam && !enemy.isDead && !enemy.isDying) {
                 const dist = Math.hypot(enemy.x - fd.x, enemy.y - fd.y);
-                if (dist < enemy.radius + 12) {
+                if (dist < enemy.radius + 14) {
                   // Combat dagger embeds into the victim!
                   sound.play('daggerHit', 0.95);
 
-                  // Inflict 14 projectile damage
+                  // Inflict 8 projectile damage
                   applyDamage(enemy, fd.damage, owner || enemy, true);
 
                   // Inflict Bleed: 4 ticks of 1 damage
@@ -4893,34 +5993,34 @@ function BallBattleGame() {
                   enemy.bleedSource = owner || enemy;
                   if (!enemy.bleedQueue) enemy.bleedQueue = [];
                   enemy.bleedQueue.push(1, 1, 1, 1);
+                  sound.play('bleed', 0.8);
 
-                  // Inflict Slow (-20% SPD, -25% DMG dealt) as long as dagger is stuck
+                  // Inflict Slow (-25% SPD, -25% DMG dealt) as long as dagger is stuck
                   enemy.isSlowed = true;
-                  // Instantaneous speed clamp to 80%
-                  enemy.vx *= 0.8;
-                  enemy.vy *= 0.8;
+                  // Instantaneous speed clamp to 75%
+                  enemy.vx *= 0.75;
+                  enemy.vy *= 0.75;
 
                   if (!enemy.stuckDaggers) enemy.stuckDaggers = [];
                   const relAngle = Math.atan2(fd.y - enemy.y, fd.x - enemy.x);
+                  // Dagger is stuck to this target until Dagger Ball body hits them
                   enemy.stuckDaggers.push({
                     ownerId: fd.ownerId,
                     relAngle: relAngle,
                     damage: fd.damage,
-                    timer: 7000,
-                    maxTimer: 7000,
                   });
 
-                  // Dagger Ball is now weaponless for 7 seconds
+                  // Dagger Ball is weaponless until it rams this enemy
                   if (owner) {
                     owner.isWeaponless = true;
                     owner.hasDagger = false;
-                    owner.weaponlessTimer = 7000;
-                    owner.weaponlessMaxTimer = 7000;
+                    owner.daggerState = 'weaponless';
+                    owner.markedEnemyId = null;
                   }
 
-                  spawnParticles(fd.x, fd.y, '#ef4444', 10, 1.8);
-                  spawnParticles(fd.x, fd.y, '#2dd4bf', 8, 1.5);
-                  spawnParticles(fd.x, fd.y, '#ffffff', 5, 1.0);
+                  spawnParticles(fd.x, fd.y, '#ef4444', 12, 2.0);
+                  spawnParticles(fd.x, fd.y, '#2dd4bf', 10, 1.8);
+                  spawnParticles(fd.x, fd.y, '#ffffff', 6, 1.2);
 
                   flyingDaggers.splice(i, 1);
                   hitEnemy = true;
@@ -4931,7 +6031,7 @@ function BallBattleGame() {
 
             if (hitEnemy) continue;
 
-            // Missed everyone after 2 seconds: pulls back to owner!
+            // If flight life expires without hitting, pull back to owner
             if (fd.life <= 0) {
               sound.play('daggerPull', 0.95);
               spawnParticles(fd.x, fd.y, '#2dd4bf', 6, 1.4);
@@ -5070,16 +6170,18 @@ function BallBattleGame() {
 
     const checkSwordHit = (attacker, victim) => {
       const isDual = attacker.type === BALL_TYPES.DUAL_SWORD;
-      const bladeLen = attacker.config?.bladeLength || (isDual ? 50 : 54);
+      const isBaby = attacker.type === BALL_TYPES.BABY_SWORD;
+      const bladeLen = attacker.config?.bladeLength || (isBaby ? 28 : (isDual ? 56 : 82));
       const angles = isDual ? [attacker.swordAngle, attacker.swordAngle + Math.PI] : [attacker.swordAngle];
 
       for (let i = 0; i < angles.length; i++) {
         const curAng = angles[i];
-        const bladeX = attacker.x + Math.cos(curAng) * bladeLen;
-        const bladeY = attacker.y + Math.sin(curAng) * bladeLen;
+        const reachDist = (attacker.radius || 38) + bladeLen * 0.55;
+        const bladeX = attacker.x + Math.cos(curAng) * reachDist;
+        const bladeY = attacker.y + Math.sin(curAng) * reachDist;
 
         const d = Math.hypot(victim.x - bladeX, victim.y - bladeY);
-        if (d < victim.radius + 10 && victim.invulnerableTimer <= 0) {
+        if (d < victim.radius + bladeLen * 0.48 && victim.invulnerableTimer <= 0) {
           // Blade hitbox deals high damage (18 DMG for Dual Sword, 22 DMG for Sword)
           const bladeDmg = attacker.config?.bladeDamage || (isDual ? 18 : 22);
           applyDamage(victim, bladeDmg, attacker, true);
@@ -5104,6 +6206,113 @@ function BallBattleGame() {
           spawnParticles(bladeX, bladeY, '#38bdf8', 8, 1.6);
           break; // Hit processed for this frame
         }
+      }
+    };
+
+    const applyRapierMark = (attacker, victim) => {
+      if (attacker.type !== BALL_TYPES.RAPIER || attacker.isDead || attacker.isDying) return;
+      if (victim.isDead || victim.isDying) return;
+      if (attacker.rapierState === 'aiming' || attacker.rapierState === 'dashing') return;
+      if ((attacker.rapierCooldown || 0) > 0) return;
+
+      attacker.rapierState = 'aiming';
+      attacker.rapierAimTimer = attacker.config?.aimDuration || 800;
+      attacker.markedRapierTargetId = victim.id;
+      attacker.vx = 0;
+      attacker.vy = 0;
+      victim.rapierMarkTimer = 4000;
+      sound.play('knifeHit', 0.8);
+      spawnParticles(attacker.x, attacker.y, '#f43f5e', 8, 1.4);
+    };
+
+    const checkRapierHit = (attacker, victim) => {
+      if (attacker.type !== BALL_TYPES.RAPIER || attacker.isDead || attacker.isDying) return;
+      if (victim.isDead || victim.isDying) return;
+
+      const rapierLen = attacker.config?.rapierLength || 58;
+      const curAng = attacker.rapierAngle || 0;
+      const reachDist = (attacker.radius || 34) + rapierLen * 0.62;
+      const tipX = attacker.x + Math.cos(curAng) * reachDist;
+      const tipY = attacker.y + Math.sin(curAng) * reachDist;
+
+      const d = Math.hypot(victim.x - tipX, victim.y - tipY);
+      if (d < victim.radius + rapierLen * 0.44 && victim.invulnerableTimer <= 0) {
+        if (attacker.rapierState === 'dashing') {
+          // Lethal 28 DMG dash thrust impact
+          const thrustDmg = attacker.config?.dashDamage || 28;
+          applyDamage(victim, thrustDmg, attacker, true);
+          victim.invulnerableTimer = 220;
+          victim.rapierMarkTimer = 0;
+
+          // Push victim backward along thrust angle
+          victim.vx += Math.cos(curAng) * 7.5;
+          victim.vy += Math.sin(curAng) * 7.5;
+
+          sound.play('swordHit', 1.0);
+          spawnParticles(tipX, tipY, '#f43f5e', 14, 2.4);
+          spawnParticles(tipX, tipY, '#fbbf24', 8, 1.8);
+
+          // Return Rapier Ball to spinning cooldown
+          attacker.rapierState = 'spinning';
+          attacker.rapierCooldown = attacker.config?.rapierCooldown || 2800;
+          attacker.markedRapierTargetId = null;
+          attacker.dashTimer = 0;
+          attacker.vx *= 0.25;
+          attacker.vy *= 0.25;
+        } else if (attacker.rapierState === 'spinning' && (attacker.rapierCooldown || 0) <= 0) {
+          // Normal rapier blade contact: 12 weapon DMG + marks enemy to initiate aim & dash thrust!
+          const weaponDmg = attacker.config?.rapierDamage || 12;
+          applyDamage(victim, weaponDmg, attacker, true);
+          victim.invulnerableTimer = 200;
+          sound.play('swordHit', 0.85);
+          spawnParticles(tipX, tipY, '#f43f5e', 8, 1.2);
+          applyRapierMark(attacker, victim);
+        }
+      }
+    };
+
+    const applyDaggerMark = (attacker, victim, isBody = false) => {
+      if (!attacker.hasDagger || attacker.isWeaponless || attacker.isDead || attacker.isDying) return;
+      if (victim.isDead || victim.isDying) return;
+      if (attacker.daggerState === 'spinning' || !attacker.markedEnemyId) {
+        attacker.daggerState = 'delay';
+        attacker.daggerDelayTimer = 2000;
+        attacker.markedEnemyId = victim.id;
+        victim.daggerMarkTimer = 4000; // 2s delay + 2s aim
+        victim.daggerMarkSourceId = attacker.id;
+
+        if (isBody) {
+          sound.play('bodyHit', 0.85);
+        } else {
+          sound.play('daggerHit', 0.85);
+        }
+        spawnParticles(victim.x, victim.y, '#2dd4bf', 12, 1.8);
+        spawnParticles(victim.x, victim.y, '#5eead4', 8, 1.4);
+      }
+    };
+
+    const checkDaggerBladeHit = (attacker, victim) => {
+      if (!attacker.hasDagger || attacker.isWeaponless || attacker.isDead || attacker.isDying) return;
+      const daggerLen = attacker.config?.daggerLength || 44;
+      const daggerReach = (attacker.radius || 34) + daggerLen * 0.75;
+      const daggerX = attacker.x + Math.cos(attacker.daggerAngle) * daggerReach;
+      const daggerY = attacker.y + Math.sin(attacker.daggerAngle) * daggerReach;
+
+      const d = Math.hypot(victim.x - daggerX, victim.y - daggerY);
+      if (d < victim.radius + 10 && victim.invulnerableTimer <= 0) {
+        const daggerDmg = attacker.config?.daggerDamage || 10;
+        applyDamage(victim, daggerDmg, attacker, true);
+        victim.invulnerableTimer = 180;
+
+        sound.play('daggerHit', 0.85);
+        spawnParticles(daggerX, daggerY, '#2dd4bf', 8, 1.6);
+        spawnParticles(daggerX, daggerY, '#ffffff', 5, 1.2);
+
+        applyDaggerMark(attacker, victim, false);
+
+        const pushAng = attacker.daggerAngle;
+        victim.vx += Math.cos(pushAng) * 2.8;
+        victim.vy += Math.sin(pushAng) * 2.8;
       }
     };
 
@@ -5152,8 +6361,13 @@ function BallBattleGame() {
 
       const d = Math.hypot(victim.x - hammerX, victim.y - hammerY);
       if (d < victim.radius + 14 && victim.invulnerableTimer <= 0) {
-        // Hammer head deals heavy strike damage (24 DMG)
-        const hammerDmg = attacker.config?.hammerDamage || 24;
+        // Hammer head deals heavy strike damage (24 DMG, deals twice the damage against Hard targets: Steel, Stone, Spike)
+        const isDoubleTarget = victim.type === BALL_TYPES.STEEL ||
+                               victim.type === BALL_TYPES.STONE ||
+                               victim.type === BALL_TYPES.SPIKE ||
+                               victim.hasHard;
+        const baseHammerDmg = attacker.config?.hammerDamage || 24;
+        const hammerDmg = isDoubleTarget ? baseHammerDmg * 2 : baseHammerDmg;
         applyDamage(victim, hammerDmg, attacker, true);
         victim.invulnerableTimer = 240;
         sound.play('hammerHit', 0.95);
@@ -5164,15 +6378,21 @@ function BallBattleGame() {
         // Reverse hammer spin in opposite direction
         attacker.hammerSpeed = -attacker.hammerSpeed;
 
-        // Massive Knockback: blasts the enemy back with heavy force (dampened if victim is Heavy)
-        const isVictimHeavy = victim.type === BALL_TYPES.STONE || (victim.type === BALL_TYPES.GROW && (victim.mass || 1.0) >= 2.8);
-        const pushAng = attacker.hammerAngle;
-        const pushForce = isVictimHeavy ? 3.8 : 8.5;
-        victim.vx += Math.cos(pushAng) * pushForce;
-        victim.vy += Math.sin(pushAng) * pushForce;
+        // Massive Knockback: blasts the enemy back with heavy force (Tower effect is immune, Heavy is dampened)
+        const isVictimTower = victim.type === BALL_TYPES.SLOW || victim.hasTower || victim.config?.hasTower;
+        const isVictimHeavy = isVictimTower || victim.type === BALL_TYPES.STONE || (victim.type === BALL_TYPES.GROW && (victim.mass || 1.0) >= 2.8);
+        if (!isVictimTower) {
+          const pushAng = attacker.hammerAngle;
+          const pushForce = isVictimHeavy ? 3.8 : 8.5;
+          victim.vx += Math.cos(pushAng) * pushForce;
+          victim.vy += Math.sin(pushAng) * pushForce;
+        }
 
-        spawnParticles(hammerX, hammerY, '#f59e0b', 14, 2.2);
-        spawnParticles(hammerX, hammerY, '#ffffff', 8, 1.6);
+        spawnParticles(hammerX, hammerY, isDoubleTarget ? '#fbbf24' : '#f59e0b', isDoubleTarget ? 20 : 14, 2.4);
+        spawnParticles(hammerX, hammerY, '#ffffff', isDoubleTarget ? 12 : 8, 1.8);
+        if (isDoubleTarget) {
+          spawnParticles(hammerX, hammerY, '#94a3b8', 10, 1.6);
+        }
       }
     };
 
@@ -5563,29 +6783,91 @@ function BallBattleGame() {
             ctx.stroke();
           }
 
-          // Dagger blade
-          ctx.fillStyle = '#f8fafc';
+          // Exact held dagger design replica: pommel, grip, guard, blade, fuller groove
+          // If stuck in wall, embed the blade tip slightly into the wall surface
+          if (fd.state === 'stuck_wall') {
+            ctx.translate(-8, 0);
+          }
+
+          // Pommel ring
+          ctx.fillStyle = '#2dd4bf';
+          ctx.fillRect(-29, -4.5, 3.5, 9);
+
+          // Dark teal textured grip handle
+          ctx.fillStyle = '#0f766e';
+          ctx.fillRect(-25.5, -3.5, 9, 7);
+
+          // Grip texture rings
+          ctx.strokeStyle = '#134e4a';
+          ctx.lineWidth = 0.8;
           ctx.beginPath();
-          ctx.moveTo(14, 0); // sharp tip
-          ctx.lineTo(2, -3.2);
-          ctx.lineTo(-6, -3.0);
-          ctx.lineTo(-6, 3.0);
-          ctx.lineTo(2, 3.2);
-          ctx.closePath();
-          ctx.fill();
-          ctx.strokeStyle = '#2dd4bf';
-          ctx.lineWidth = 1;
+          ctx.moveTo(-22.5, -3.5); ctx.lineTo(-22.5, 3.5);
+          ctx.moveTo(-19.5, -3.5); ctx.lineTo(-19.5, 3.5);
           ctx.stroke();
 
-          // Guard & hilt
-          ctx.fillStyle = '#0f766e';
-          ctx.fillRect(-7, -4.5, 3, 9);
-          ctx.fillStyle = '#134e4a';
-          ctx.fillRect(-14, -2.2, 7, 4.4);
-          ctx.fillStyle = '#2dd4bf';
-          ctx.fillRect(-16, -3, 2, 6);
+          // Hilt guard & bolster (matching held dagger #14b8a6)
+          ctx.fillStyle = '#14b8a6';
+          ctx.fillRect(-16.5, -7.5, 4.5, 15);
+          ctx.strokeStyle = '#2dd4bf';
+          ctx.lineWidth = 1.1;
+          ctx.strokeRect(-16.5, -7.5, 4.5, 15);
+
+          // Razor-sharp double-edged dagger blade with steel gradient
+          const bladeGrad = ctx.createLinearGradient(-12, 0, 22, 0);
+          bladeGrad.addColorStop(0, '#94a3b8');
+          bladeGrad.addColorStop(0.5, '#f8fafc');
+          bladeGrad.addColorStop(1, '#cbd5e1');
+
+          ctx.fillStyle = bladeGrad;
+          ctx.beginPath();
+          ctx.moveTo(-12, -4.5);
+          ctx.lineTo(14, -4.0);
+          ctx.lineTo(22, 0); // razor sharp dagger tip
+          ctx.lineTo(14, 4.0);
+          ctx.lineTo(-12, 4.5);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // Cyan fuller groove along blade center
+          ctx.strokeStyle = '#2dd4bf';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-8, 0);
+          ctx.lineTo(12, 0);
+          ctx.stroke();
 
           ctx.restore();
+
+          // Telekinesis beam when returning
+          if (fd.state === 'returning') {
+            const owner = physicsRef.current.balls?.find(b => b.id === fd.ownerId);
+            if (owner && !owner.isDead) {
+              ctx.save();
+              ctx.strokeStyle = 'rgba(45, 212, 191, 0.45)';
+              ctx.lineWidth = 1.6;
+              ctx.setLineDash([4, 4]);
+              ctx.beginPath();
+              ctx.moveTo(owner.x, owner.y);
+              ctx.lineTo(fd.x, fd.y);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+
+          // Countdown tag on wall stuck dagger
+          if (fd.state === 'stuck_wall') {
+            const secLeft = Math.max(0, (fd.wallTimer || 0) / 1000).toFixed(1);
+            ctx.save();
+            ctx.font = '700 8.5px "JetBrains Mono", monospace';
+            ctx.fillStyle = '#2dd4bf';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${secLeft}s`, fd.x, fd.y - 12);
+            ctx.restore();
+          }
         });
       }
 
@@ -5643,6 +6925,8 @@ function BallBattleGame() {
 
             ctx.restore();
           }
+
+
         });
       }
 
@@ -5716,11 +7000,13 @@ function BallBattleGame() {
           else if (ball.type === BALL_TYPES.HAMMER) currentRot = ball.hammerAngle || 0;
           else if (ball.type === BALL_TYPES.KNIFE) currentRot = ball.knifeAngle || 0;
           else if (ball.type === BALL_TYPES.DAGGER) currentRot = ball.daggerAngle || 0;
+          else if (ball.type === BALL_TYPES.RAPIER) currentRot = ball.rapierAngle || 0;
           else if (ball.type === BALL_TYPES.SHARD) currentRot = ball.shardAngle || 0;
-          else if (ball.type === BALL_TYPES.GUN) currentRot = ball.gunAngle || 0;
+          else if (ball.type === BALL_TYPES.GUN || ball.type === BALL_TYPES.BABY_GUN) currentRot = ball.gunAngle || 0;
           else if (ball.type === BALL_TYPES.SNIPER) currentRot = ball.sniperAngle || 0;
           else if (ball.type === BALL_TYPES.THORN) currentRot = ball.thornAngle || 0;
           else if (ball.type === BALL_TYPES.MULTI) currentRot = ball.multiAngle || 0;
+          else if (ball.type === BALL_TYPES.PUSH) currentRot = ball.pushAngle || 0;
           else if (ball.type === BALL_TYPES.ACCELERATOR) currentRot = Math.atan2(ball.vy || 0, ball.vx || 1);
           else if (ball.type === BALL_TYPES.DICE) currentRot = 0;
           else currentRot = ball.swordAngle || 0;
@@ -5748,7 +7034,10 @@ function BallBattleGame() {
 
         const ballExtraData = ball.type === BALL_TYPES.DICE
           ? diceState
-          : (ball.type === BALL_TYPES.DAGGER ? { hasDagger: ball.hasDagger && !ball.isWeaponless } : null);
+          : (ball.type === BALL_TYPES.DAGGER ? { hasDagger: ball.hasDagger && !ball.isWeaponless }
+          : (ball.type === BALL_TYPES.PUSH ? { hasPushCharge: ball.hasPushCharge }
+          : (ball.type === BALL_TYPES.MOTHER ? { isSpawningBrood: ball.isSpawningBrood }
+          : (ball.type === BALL_TYPES.RAPIER ? { isAiming: ball.rapierState === 'aiming', isDashing: ball.rapierState === 'dashing' } : null))));
 
         draw3DBall(
           ctx,
@@ -5770,6 +7059,8 @@ function BallBattleGame() {
         if (simState !== 'planning') {
           drawBurningBallAnimation(ctx, ball, renderX, renderY);
           drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight);
+          drawDaggerMarkReticle(ctx, ball, renderX, renderY, isLight);
+          drawRapierMarkReticle(ctx, ball, renderX, renderY, isLight);
           drawSlowEffect(ctx, ball, renderX, renderY);
           drawStuckDaggers(ctx, ball, renderX, renderY);
         }
@@ -6039,6 +7330,64 @@ function BallBattleGame() {
         ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.6);
         ctx.restore();
       });
+
+      // Render divine blessing aura rings
+      if (simState !== 'planning' && physicsRef.current.blessRings) {
+        physicsRef.current.blessRings.forEach(br => {
+          ctx.save();
+          const alpha = Math.max(0, br.life);
+          ctx.globalAlpha = Math.min(1.0, alpha);
+
+          // Golden celestial outer ring
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 3.5 * alpha;
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 14 * alpha;
+          ctx.beginPath();
+          ctx.arc(br.x, br.y, br.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner halo shimmer
+          if (br.radius > 20) {
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 1.6 * alpha;
+            ctx.beginPath();
+            ctx.arc(br.x, br.y, br.radius * 0.75, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        });
+      }
+
+      // Render kinetic push shockwaves
+      if (simState !== 'planning' && physicsRef.current.pushShockwaves) {
+        physicsRef.current.pushShockwaves.forEach(ps => {
+          ctx.save();
+          const alpha = Math.max(0, ps.life);
+          ctx.globalAlpha = Math.min(1.0, alpha);
+
+          // Outer expanding shockwave ring
+          ctx.strokeStyle = '#818cf8';
+          ctx.lineWidth = 3.5 * alpha;
+          ctx.shadowColor = '#6366f1';
+          ctx.shadowBlur = 12 * alpha;
+          ctx.beginPath();
+          ctx.arc(ps.x, ps.y, ps.radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Inner echo ripple ring
+          if (ps.radius > 20) {
+            ctx.strokeStyle = '#c7d2fe';
+            ctx.lineWidth = 1.8 * alpha;
+            ctx.beginPath();
+            ctx.arc(ps.x, ps.y, ps.radius * 0.72, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        });
+      }
 
       // Render fiery impact blast animations
       if (simState !== 'planning' && physicsRef.current.fireImpacts) {
@@ -6468,6 +7817,22 @@ function BallBattleGame() {
                       <tr className="row-inflict">
                         <td className="col-status-tag">
                           <span
+                            className="chip-badge badge-dagger-mark"
+                            onMouseEnter={(e) => showTooltip(e, 'DAGGER_MARK')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <DaggerIcon size={13} color="#14b8a6" /> DAGGER MARK
+                          </span>
+                        </td>
+                        <td className="col-source">Dagger Ball Contact</td>
+                        <td className="col-description">
+                          Inflicted upon contact with Dagger Ball's body or dagger blade. After 2 seconds, Dagger Ball enters Aim Mode while moving to aim for 2 seconds and throw its dagger at this target.
+                        </td>
+                      </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
                             className="chip-badge badge-dagger-hit"
                             onMouseEnter={(e) => showTooltip(e, 'DAGGER_HIT')}
                             onMouseLeave={hideTooltip}
@@ -6477,7 +7842,7 @@ function BallBattleGame() {
                         </td>
                         <td className="col-source">Dagger Ball Embedded Blade</td>
                         <td className="col-description">
-                          Inflicted when struck by a thrown combat dagger. Target is hampered by the embedded blade, reducing Movement Speed by <strong>20%</strong> and Damage Dealt by <strong>25%</strong> until the dagger is extracted.
+                          Inflicted when struck by a thrown combat dagger. Target is hampered by the embedded blade, suffering <strong>Bleed</strong> and <strong>Slow (-25% SPD, -25% DMG)</strong> until Dagger Ball's body collides with this enemy.
                         </td>
                       </tr>
 
@@ -6488,12 +7853,28 @@ function BallBattleGame() {
                             onMouseEnter={(e) => showTooltip(e, 'DAGGER_PULL')}
                             onMouseLeave={hideTooltip}
                           >
-                            <DaggerIcon size={13} color="#38bdf8" /> DAGGER PULL
+                            <DaggerIcon size={13} color="#38bdf8" /> TELEKINESIS RECALL
                           </span>
                         </td>
-                        <td className="col-source">Dagger Ball Recall Ability</td>
+                        <td className="col-source">Dagger Ball Wall Recall</td>
                         <td className="col-description">
-                          Inflict (Self) that calls the thrown combat dagger back to Dagger Ball. Rips out embedded daggers from enemies dealing bonus damage, or retrieves them from arena walls, re-arming Dagger Ball upon return.
+                          Self-inflict ability that telekinetically recalls a missed combat dagger back to Dagger Ball 4 seconds after embedding into an arena wall.
+                        </td>
+                      </tr>
+
+                      <tr className="row-inflict">
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-rapier-mark"
+                            onMouseEnter={(e) => showTooltip(e, 'RAPIER_MARK')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <RapierIcon size={13} color="#f43f5e" /> RAPIER MARK
+                          </span>
+                        </td>
+                        <td className="col-source">Rapier Ball Contact</td>
+                        <td className="col-description">
+                          Inflicted upon contact with Rapier Ball's weapon or body. Rapier Ball stops moving to aim its rapier directly at this target for 0.8s, then dashes forward with a deadly 28 DMG thrust.
                         </td>
                       </tr>
                     </tbody>
@@ -6547,6 +7928,22 @@ function BallBattleGame() {
                         <td className="col-source">Glass Ball Trait</td>
                         <td className="col-description">
                           Taking damage physically chips and breaks the ball body, dropping sharp glass shards on the arena floor that persist upon death and shatter when enemy balls step on them to deal 8 damage + Bleed.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-hard"
+                            onMouseEnter={(e) => showTooltip(e, 'HARD')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <HardIcon size={13} color="#94a3b8" /> HARD
+                          </span>
+                        </td>
+                        <td className="col-source">Steel Ball / Stone Ball</td>
+                        <td className="col-description">
+                          Dense, hardened structural composition. Highly vulnerable to concussive warhammer strikes (<strong>Hammer Ball deals 2x damage</strong> against Hard targets).
                         </td>
                       </tr>
 
@@ -6659,6 +8056,38 @@ function BallBattleGame() {
                         <td className="col-source">Spit Fire Ball Innate Trait</td>
                         <td className="col-description">
                           Self-imbued mythical celestial blue flame aura. Leaves an azure ground trail, incinerates enemy Thorn Traps on contact, and inflicts Scorch and Flame Lock (<strong>5 seconds</strong>) while unleashing curving mini blue flame barrages.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-brood"
+                            onMouseEnter={(e) => showTooltip(e, 'BROOD')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <BroodIcon size={13} color="#f472b6" /> BROOD
+                          </span>
+                        </td>
+                        <td className="col-source">Mother Ball Mythical Trait</td>
+                        <td className="col-description">
+                          Channels maternal brood birthing. Mother Ball has <strong>1.2 SPD</strong>, halts while spawning baby balls (costs 5 HP), and cycles between Tough Baby, Sword Baby, and Gun Baby up to 3 max active brood.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-dash"
+                            onMouseEnter={(e) => showTooltip(e, 'DASH')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <DashIcon size={13} color="#fbbf24" /> DASH
+                          </span>
+                        </td>
+                        <td className="col-source">Rapier Ball Trait</td>
+                        <td className="col-description">
+                          Self-effect trait triggered after completing aim lock. Rapier Ball surges forward at <strong>17.5 speed</strong> with crimson speed trails, piercing its target for <strong>28 thrust damage</strong>.
                         </td>
                       </tr>
                     </tbody>
@@ -6823,7 +8252,23 @@ function BallBattleGame() {
                         </td>
                         <td className="col-source">Dagger Ball Weapon</td>
                         <td className="col-description">
-                          Aims and hurls a combat dagger dealing <strong>14 projectile damage</strong> and inflicting Bleed and Slow (-20% SPD, -25% DMG). Colliding body-to-body with the embedded victim rips the dagger back, dealing <strong>+6 retrieval damage</strong> and re-arming the shooter.
+                          Spins and bounces with a combat dagger. Contact with body or weapon inflicts <strong>Dagger Mark</strong>. 2 seconds later, Dagger Ball aims for 2 seconds while moving and hurls the dagger dealing <strong>8 projectile damage</strong>, <strong>Bleed</strong>, and <strong>Slow (-25% SPD, -25% DMG)</strong>. The dagger can only be retrieved by ramming the victim with Dagger Ball's body, or after 4s via telekinesis if it hit a wall.
+                        </td>
+                      </tr>
+
+                      <tr>
+                        <td className="col-status-tag">
+                          <span
+                            className="chip-badge badge-rapier"
+                            onMouseEnter={(e) => showTooltip(e, 'RAPIER')}
+                            onMouseLeave={hideTooltip}
+                          >
+                            <RapierIcon size={13} color="#fbbf24" /> RAPIER
+                          </span>
+                        </td>
+                        <td className="col-source">Rapier Ball Weapon</td>
+                        <td className="col-description">
+                          Slender fencing rapier with ornate golden cup-hilt. Rotates in combat dealing <strong>12 weapon damage</strong> (5 body bump DMG); upon contacting an enemy, marks the victim, aims for 0.8s, and launches a lightning forward dash thrust for <strong>28 piercing damage</strong>.
                         </td>
                       </tr>
                     </tbody>
@@ -6931,10 +8376,10 @@ function BallBattleGame() {
                       onMouseEnter={() => sound.play('buttonHover', 0.25)}
                     >
                       <span>All Rarities</span>
-                      <span className="count-tag">{Object.keys(BALL_CONFIGS).length}</span>
+                      <span className="count-tag">{Object.values(BALL_CONFIGS).filter(b => !b.isSummonOnly).length}</span>
                     </button>
                     {Object.values(RARITIES).map(r => {
-                      const count = Object.values(BALL_CONFIGS).filter(b => b.rarity === r).length;
+                      const count = Object.values(BALL_CONFIGS).filter(b => !b.isSummonOnly && b.rarity === r).length;
                       if (count === 0) return null;
                       return (
                         <button
@@ -6963,7 +8408,7 @@ function BallBattleGame() {
 
           <div className="sidebar-ball-list">
             {Object.values(BALL_CONFIGS)
-              .filter(ball => rarityFilter === 'ALL' || ball.rarity === rarityFilter)
+              .filter(ball => !ball.isSummonOnly && (rarityFilter === 'ALL' || ball.rarity === rarityFilter))
               .sort((a, b) => {
                 const orderA = RARITY_ORDER.indexOf(a.rarity);
                 const orderB = RARITY_ORDER.indexOf(b.rarity);
@@ -7178,12 +8623,12 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.GUN && (
                               <div className="hud-shield-charge-wrapper" title="Cannon Fire: Shoots heavy bullet every 3 seconds">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#f59e0b' }}>CANNON RELOAD</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
+                                  <span className="hud-charge-txt">CANNON RELOAD</span>
+                                  <span className="hud-charge-numeric">
                                     {((3000 - Math.max(0, b.gunCooldown !== undefined ? b.gunCooldown : 3000)) / 1000).toFixed(1)}s / 3.0s
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((3000 - Math.max(0, b.gunCooldown !== undefined ? b.gunCooldown : 3000)) / 3000) * 100))}%`,
@@ -7201,12 +8646,12 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.HEAL && (
                               <div className="hud-shield-charge-wrapper" title="Self-Heal: Regenerates +5 HP every 6 seconds">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#10b981' }}>HEAL RECHARGE</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#10b981' }}>
+                                  <span className="hud-charge-txt">HEAL RECHARGE</span>
+                                  <span className="hud-charge-numeric">
                                     {((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 1000).toFixed(1)}s / 6.0s
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(16, 185, 129, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 6000) * 100))}%`,
@@ -7224,14 +8669,14 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.DICE && (
                               <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 7 times absorbs pity to transform Mid/Low rolls into a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                  <span className="hud-charge-txt">
                                     {(b.dicePity || 0) >= 7 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                  <span className="hud-charge-numeric">
                                     {b.dicePity || 0} / 7 HITS
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 7) * 100))}%`,
@@ -7249,16 +8694,16 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.SNIPER && (
                               <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 15 DMG bullet">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
+                                  <span className="hud-charge-txt">
                                     {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
+                                  <span className="hud-charge-numeric">
                                     {b.sniperState === 'aiming'
                                       ? `AIMING ${(((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1000) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(56, 189, 248, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
@@ -7274,26 +8719,170 @@ function BallBattleGame() {
                               </div>
                             )}
 
-                            {/* Dagger Ball 7-Second Dagger Pull Bar */}
-                            {b.type === BALL_TYPES.DAGGER && (
-                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Throws dagger inflicting Dagger Hit and Bleed; Dagger Pull calls it back">
+                                                                                    {/* Priest Ball Divine Blessing Bar */}
+                            {b.type === BALL_TYPES.PRIEST && (
+                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (heal is divided evenly among beneficiaries)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#2dd4bf' }}>DAGGER PULL</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#2dd4bf' }}>
-                                    {b.isWeaponless
-                                      ? (b.weaponlessTimer > 0 ? `${(b.weaponlessTimer / 1000).toFixed(1)}s / 7.0s` : 'CALLING')
+                                  <span className="hud-charge-txt">DIVINE BLESSING</span>
+                                  <span className="hud-charge-numeric">
+                                    {(b.blessTimer || 0) <= 0
+                                      ? 'READY'
+                                      : `${(((9000 - Math.max(0, b.blessTimer || 0))) / 1000).toFixed(1)}s / 9.0s`}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, ((9000 - Math.max(0, b.blessTimer || 0)) / 9000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: (b.blessTimer || 0) <= 0 ? '#fde047' : '#f59e0b',
+                                      boxShadow: '0 0 6px rgba(245, 158, 11, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Charge) */}
+                            {b.type === BALL_TYPES.PUSH && (
+                              <div className="hud-shield-charge-wrapper" title="Kinetic Push: Needs 1 hit to charge repulsor pulse. Pushes nearby enemies away upon activation, then needs another hit.">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">REPULSOR CHARGE</span>
+                                  <span className="hud-charge-numeric">
+                                    {b.hasPushCharge ? 'READY' : '0 / 1 HIT'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.hasPushCharge ? '100%' : '0%',
+                                      height: '100%',
+                                      backgroundColor: b.hasPushCharge ? '#818cf8' : '#6366f1',
+                                      boxShadow: b.hasPushCharge ? '0 0 8px rgba(129, 140, 248, 0.8)' : 'none',
+                                      transition: 'width 0.2s ease',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Dagger Ball Dynamic Combat Bar (Inflicts Dagger Mark on enemy, self shows aim prep & recall) */}
+                            {b.type === BALL_TYPES.DAGGER && (
+                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Inflicts Dagger Mark on enemy; self stops moving to aim and throws dagger">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.daggerState === 'aiming'
+                                      ? 'AIM LOCK'
+                                      : b.daggerState === 'delay'
+                                      ? 'AIM PREP'
+                                      : b.isWeaponless
+                                      ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                          ? 'WALL RECALL'
+                                          : 'DAGGER RECALL')
+                                      : 'COMBAT DAGGER'}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {b.daggerState === 'aiming'
+                                      ? `${(((2000 - Math.max(0, b.daggerAimTimer || 0))) / 1000).toFixed(1)}s / 2.0s`
+                                      : b.daggerState === 'delay'
+                                      ? `${(((2000 - Math.max(0, b.daggerDelayTimer || 0))) / 1000).toFixed(1)}s / 2.0s`
+                                      : b.isWeaponless
+                                      ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                          ? `${(((4000 - Math.max(0, (physicsRef.current.flyingDaggers.find(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')?.wallTimer || 0)))) / 1000).toFixed(1)}s / 4.0s`
+                                          : (physicsRef.current.balls.some(other => other.stuckDaggers?.some(d => d.ownerId === b.id))
+                                              ? 'EMBEDDED'
+                                              : 'CALLING'))
                                       : 'READY'}
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(45, 212, 191, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: b.isWeaponless
-                                        ? (b.weaponlessTimer > 0 ? `${Math.min(100, Math.max(0, (1 - b.weaponlessTimer / 7000) * 100))}%` : '50%')
+                                      width: b.daggerState === 'aiming'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.daggerAimTimer || 0) / 2000) * 100))}%`
+                                        : b.daggerState === 'delay'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.daggerDelayTimer || 0) / 2000) * 100))}%`
+                                        : b.isWeaponless
+                                        ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                            ? `${Math.max(0, Math.min(100, (1 - (physicsRef.current.flyingDaggers.find(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')?.wallTimer || 0) / 4000) * 100))}%`
+                                            : '35%')
                                         : '100%',
                                       height: '100%',
-                                      backgroundColor: '#2dd4bf',
+                                      backgroundColor: b.daggerState === 'aiming' ? '#38bdf8' : '#2dd4bf',
                                       boxShadow: '0 0 6px rgba(45, 212, 191, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Mother Ball Brood Birthing Bar */}
+                            {b.type === BALL_TYPES.MOTHER && (
+                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, and Gun Baby (max 3 active).">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '') : 'NORMAL'}`}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                      ? 'MAX BROOD (3/3)'
+                                      : (b.isSpawningBrood
+                                        ? '-5 HP'
+                                        : `${(((5500 - Math.max(0, b.broodTimer || 0))) / 1000).toFixed(1)}s / 5.5s`)}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                        ? 100
+                                        : Math.min(100, Math.max(0, ((5500 - Math.max(0, b.broodTimer || 0)) / 5500) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: b.isSpawningBrood ? '#ef4444' : '#f472b6',
+                                      boxShadow: '0 0 6px rgba(244, 114, 182, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Rapier Ball Dynamic Combat Bar */}
+                            {b.type === BALL_TYPES.RAPIER && (
+                              <div className="hud-shield-charge-wrapper" title="Rapier: Spins normally; marks enemy on hit, aims 0.8s, and dashes forward with 28 DMG piercing thrust">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.rapierState === 'dashing'
+                                      ? 'DASH THRUST'
+                                      : b.rapierState === 'aiming'
+                                      ? 'AIMING THRUST'
+                                      : (b.rapierCooldown || 0) > 0
+                                      ? 'COOLDOWN'
+                                      : 'THRUST READY'}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {b.rapierState === 'dashing'
+                                      ? 'STRIKING'
+                                      : b.rapierState === 'aiming'
+                                      ? `${(((800 - Math.max(0, b.rapierAimTimer || 0))) / 1000).toFixed(1)}s / 0.8s`
+                                      : (b.rapierCooldown || 0) > 0
+                                      ? `${(((b.rapierCooldown || 0)) / 1000).toFixed(1)}s`
+                                      : 'READY'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.rapierState === 'dashing'
+                                        ? '100%'
+                                        : b.rapierState === 'aiming'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.rapierAimTimer || 0) / 800) * 100))}%`
+                                        : (b.rapierCooldown || 0) > 0
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.rapierCooldown || 0) / 2800) * 100))}%`
+                                        : '100%',
+                                      height: '100%',
+                                      backgroundColor: b.rapierState === 'dashing' ? '#fbbf24' : (b.rapierState === 'aiming' ? '#f43f5e' : ((b.rapierCooldown || 0) > 0 ? '#64748b' : '#f43f5e')),
+                                      boxShadow: b.rapierState === 'dashing' ? '0 0 8px rgba(251, 191, 36, 0.9)' : (b.rapierState === 'aiming' ? '0 0 8px rgba(244, 63, 94, 0.8)' : 'none'),
                                       transition: 'width 0.05s linear',
                                     }}
                                   />
@@ -7303,6 +8892,15 @@ function BallBattleGame() {
 
                             {/* Row 4: SVG Icons of Effects (No emojis) */}
                             <div className="hud-row-effects">
+                              {b.type === BALL_TYPES.MOTHER && (
+                                <span
+                                  className="hud-effect-badge brood-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'BROOD')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BroodIcon size={13} color="#f472b6" /> BROOD
+                                </span>
+                              )}
                               {b.bleedTicksLeft > 0 && (
                                 <span
                                   className="hud-effect-badge bleed-active"
@@ -7337,6 +8935,33 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <SpitFireTargetIcon size={13} color="#38bdf8" /> FLAME LOCK ({(b.spitFireTargetTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                                                            {b.knockbackTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge knockback-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'KNOCKBACK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <KnockbackIcon size={13} color="#a5b4fc" /> KNOCKBACK ({(b.knockbackTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.daggerMarkTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge dagger-mark-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_MARK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#14b8a6" /> DAGGER MARK ({(b.daggerMarkTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.rapierMarkTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge rapier-mark-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'RAPIER_MARK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <RapierIcon size={13} color="#f43f5e" /> RAPIER MARK ({(b.rapierMarkTimer / 1000).toFixed(1)}s)
                                 </span>
                               )}
                               {b.isSlowed && !b.isDead && (
@@ -7375,6 +9000,42 @@ function BallBattleGame() {
                                   <KnifeIcon size={13} color="#94a3b8" /> KNIFE
                                 </span>
                               )}
+                                                                                          {b.type === BALL_TYPES.SLOW && (
+                                <>
+                                  <span
+                                    className="hud-effect-badge heavy-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'HEAVY')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <HeavyIcon size={13} color="#f59e0b" /> HEAVY
+                                  </span>
+                                  <span
+                                    className="hud-effect-badge tower-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'TOWER')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <TowerIcon size={13} color="#94a3b8" /> TOWER
+                                  </span>
+                                </>
+                              )}
+                              {b.type === BALL_TYPES.PRIEST && (
+                                <span
+                                  className={`hud-effect-badge ${b.blessActiveTimer > 0 ? 'blessing-active' : ''}`}
+                                  onMouseEnter={(e) => showTooltip(e, 'BLESSING')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BlessIcon size={13} color="#f59e0b" /> BLESSING
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.PUSH && (
+                                <span
+                                  className={`hud-effect-badge ${b.pushActiveTimer > 0 ? 'push-active' : ''}`}
+                                  onMouseEnter={(e) => showTooltip(e, 'PUSH')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <PushIcon size={13} color="#818cf8" /> PUSH
+                                </span>
+                              )}
                               {b.type === BALL_TYPES.DAGGER && !b.isWeaponless && (
                                 <span
                                   className="hud-effect-badge dagger-active"
@@ -7401,6 +9062,24 @@ function BallBattleGame() {
                                 >
                                   <HammerIcon size={13} color="#b91c1c" /> HAMMER
                                 </span>
+                              )}
+                              {b.type === BALL_TYPES.RAPIER && (
+                                <>
+                                  <span
+                                    className={`hud-effect-badge ${b.dashTimer > 0 || b.rapierState === 'dashing' ? 'dash-active' : ''}`}
+                                    onMouseEnter={(e) => showTooltip(e, 'DASH')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <DashIcon size={13} color="#fbbf24" /> DASH
+                                  </span>
+                                  <span
+                                    className="hud-effect-badge rapier-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'RAPIER')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <RapierIcon size={13} color="#f43f5e" /> RAPIER
+                                  </span>
+                                </>
                               )}
                               {b.type === BALL_TYPES.GLASS && (
                                 <span
@@ -7432,6 +9111,13 @@ function BallBattleGame() {
                               {b.type === BALL_TYPES.STONE && (
                                 <>
                                   <span
+                                    className="hud-effect-badge hard-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'HARD')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <HardIcon size={13} color="#94a3b8" /> HARD
+                                  </span>
+                                  <span
                                     className="hud-effect-badge heavy-active"
                                     onMouseEnter={(e) => showTooltip(e, 'HEAVY')}
                                     onMouseLeave={hideTooltip}
@@ -7446,6 +9132,15 @@ function BallBattleGame() {
                                     <ArmorIcon size={13} color="#0284c7" /> ARMOR
                                   </span>
                                 </>
+                              )}
+                              {b.type === BALL_TYPES.STEEL && (
+                                <span
+                                  className="hud-effect-badge hard-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'HARD')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <HardIcon size={13} color="#94a3b8" /> HARD
+                                </span>
                               )}
                               {b.type === BALL_TYPES.FAST && (
                                 <span
@@ -7794,12 +9489,12 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.GUN && (
                               <div className="hud-shield-charge-wrapper" title="Cannon Fire: Shoots heavy bullet every 3 seconds">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#f59e0b' }}>CANNON RELOAD</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#f59e0b' }}>
+                                  <span className="hud-charge-txt">CANNON RELOAD</span>
+                                  <span className="hud-charge-numeric">
                                     {((3000 - Math.max(0, b.gunCooldown !== undefined ? b.gunCooldown : 3000)) / 1000).toFixed(1)}s / 3.0s
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((3000 - Math.max(0, b.gunCooldown !== undefined ? b.gunCooldown : 3000)) / 3000) * 100))}%`,
@@ -7817,12 +9512,12 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.HEAL && (
                               <div className="hud-shield-charge-wrapper" title="Self-Heal: Regenerates +5 HP every 6 seconds">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#10b981' }}>HEAL RECHARGE</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#10b981' }}>
+                                  <span className="hud-charge-txt">HEAL RECHARGE</span>
+                                  <span className="hud-charge-numeric">
                                     {((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 1000).toFixed(1)}s / 6.0s
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(16, 185, 129, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((6000 - Math.max(0, b.healTimer !== undefined ? b.healTimer : 6000)) / 6000) * 100))}%`,
@@ -7840,14 +9535,14 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.DICE && (
                               <div className="hud-shield-charge-wrapper" title="Dice Pity: Taking damage 7 times absorbs pity to transform Mid/Low rolls into a High Roll (30-50 DMG)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                  <span className="hud-charge-txt">
                                     {(b.dicePity || 0) >= 7 ? 'HIGH ROLL PITY READY!' : 'HIGH ROLL PITY'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: (b.dicePity || 0) >= 7 ? '#fbbf24' : '#f59e0b' }}>
+                                  <span className="hud-charge-numeric">
                                     {b.dicePity || 0} / 7 HITS
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(245, 158, 11, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: `${Math.min(100, Math.max(0, ((b.dicePity || 0) / 7) * 100))}%`,
@@ -7865,16 +9560,16 @@ function BallBattleGame() {
                             {b.type === BALL_TYPES.SNIPER && (
                               <div className="hud-shield-charge-wrapper" title="Sniper Lock-On: Freezes midair to aim and shoot 15 DMG bullet">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#38bdf8' }}>
+                                  <span className="hud-charge-txt">
                                     {b.sniperState === 'aiming' ? 'TARGET LOCKED' : 'SNIPER RELOAD'}
                                   </span>
-                                  <span className="hud-charge-numeric" style={{ color: '#38bdf8' }}>
+                                  <span className="hud-charge-numeric">
                                     {b.sniperState === 'aiming'
                                       ? `AIMING ${(((b.config?.aimDuration || 1000) - Math.max(0, b.sniperAimTimer || 0)) / 1000).toFixed(1)}s / ${((b.config?.aimDuration || 1000) / 1000).toFixed(1)}s`
                                       : `${((4000 - Math.max(0, b.sniperCooldown !== undefined ? b.sniperCooldown : 4000)) / 1000).toFixed(1)}s / 4.0s`}
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(56, 189, 248, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
                                       width: b.sniperState === 'aiming'
@@ -7890,26 +9585,170 @@ function BallBattleGame() {
                               </div>
                             )}
 
-                            {/* Dagger Ball 7-Second Dagger Pull Bar */}
-                            {b.type === BALL_TYPES.DAGGER && (
-                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Throws dagger inflicting Dagger Hit and Bleed; Dagger Pull calls it back">
+                                                                                    {/* Priest Ball Divine Blessing Bar */}
+                            {b.type === BALL_TYPES.PRIEST && (
+                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (heal is divided evenly among beneficiaries)">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt" style={{ color: '#2dd4bf' }}>DAGGER PULL</span>
-                                  <span className="hud-charge-numeric" style={{ color: '#2dd4bf' }}>
-                                    {b.isWeaponless
-                                      ? (b.weaponlessTimer > 0 ? `${(b.weaponlessTimer / 1000).toFixed(1)}s / 7.0s` : 'CALLING')
+                                  <span className="hud-charge-txt">DIVINE BLESSING</span>
+                                  <span className="hud-charge-numeric">
+                                    {(b.blessTimer || 0) <= 0
+                                      ? 'READY'
+                                      : `${(((9000 - Math.max(0, b.blessTimer || 0))) / 1000).toFixed(1)}s / 9.0s`}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${Math.min(100, Math.max(0, ((9000 - Math.max(0, b.blessTimer || 0)) / 9000) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: (b.blessTimer || 0) <= 0 ? '#fde047' : '#f59e0b',
+                                      boxShadow: '0 0 6px rgba(245, 158, 11, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Charge) */}
+                            {b.type === BALL_TYPES.PUSH && (
+                              <div className="hud-shield-charge-wrapper" title="Kinetic Push: Needs 1 hit to charge repulsor pulse. Pushes nearby enemies away upon activation, then needs another hit.">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">REPULSOR CHARGE</span>
+                                  <span className="hud-charge-numeric">
+                                    {b.hasPushCharge ? 'READY' : '0 / 1 HIT'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.hasPushCharge ? '100%' : '0%',
+                                      height: '100%',
+                                      backgroundColor: b.hasPushCharge ? '#818cf8' : '#6366f1',
+                                      boxShadow: b.hasPushCharge ? '0 0 8px rgba(129, 140, 248, 0.8)' : 'none',
+                                      transition: 'width 0.2s ease',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Dagger Ball Dynamic Combat Bar (Inflicts Dagger Mark on enemy, self shows aim prep & recall) */}
+                            {b.type === BALL_TYPES.DAGGER && (
+                              <div className="hud-shield-charge-wrapper" title="Combat Dagger: Inflicts Dagger Mark on enemy; self stops moving to aim and throws dagger">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.daggerState === 'aiming'
+                                      ? 'AIM LOCK'
+                                      : b.daggerState === 'delay'
+                                      ? 'AIM PREP'
+                                      : b.isWeaponless
+                                      ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                          ? 'WALL RECALL'
+                                          : 'DAGGER RECALL')
+                                      : 'COMBAT DAGGER'}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {b.daggerState === 'aiming'
+                                      ? `${(((2000 - Math.max(0, b.daggerAimTimer || 0))) / 1000).toFixed(1)}s / 2.0s`
+                                      : b.daggerState === 'delay'
+                                      ? `${(((2000 - Math.max(0, b.daggerDelayTimer || 0))) / 1000).toFixed(1)}s / 2.0s`
+                                      : b.isWeaponless
+                                      ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                          ? `${(((4000 - Math.max(0, (physicsRef.current.flyingDaggers.find(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')?.wallTimer || 0)))) / 1000).toFixed(1)}s / 4.0s`
+                                          : (physicsRef.current.balls.some(other => other.stuckDaggers?.some(d => d.ownerId === b.id))
+                                              ? 'EMBEDDED'
+                                              : 'CALLING'))
                                       : 'READY'}
                                   </span>
                                 </div>
-                                <div className="hud-charge-bar-track" style={{ height: 4, background: 'rgba(45, 212, 191, 0.15)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: b.isWeaponless
-                                        ? (b.weaponlessTimer > 0 ? `${Math.min(100, Math.max(0, (1 - b.weaponlessTimer / 7000) * 100))}%` : '50%')
+                                      width: b.daggerState === 'aiming'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.daggerAimTimer || 0) / 2000) * 100))}%`
+                                        : b.daggerState === 'delay'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.daggerDelayTimer || 0) / 2000) * 100))}%`
+                                        : b.isWeaponless
+                                        ? (physicsRef.current.flyingDaggers?.some(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')
+                                            ? `${Math.max(0, Math.min(100, (1 - (physicsRef.current.flyingDaggers.find(fd => fd.ownerId === b.id && fd.state === 'stuck_wall')?.wallTimer || 0) / 4000) * 100))}%`
+                                            : '35%')
                                         : '100%',
                                       height: '100%',
-                                      backgroundColor: '#2dd4bf',
+                                      backgroundColor: b.daggerState === 'aiming' ? '#38bdf8' : '#2dd4bf',
                                       boxShadow: '0 0 6px rgba(45, 212, 191, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Mother Ball Brood Birthing Bar */}
+                            {b.type === BALL_TYPES.MOTHER && (
+                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, and Gun Baby (max 3 active).">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '') : 'NORMAL'}`}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                      ? 'MAX BROOD (3/3)'
+                                      : (b.isSpawningBrood
+                                        ? '-5 HP'
+                                        : `${(((5500 - Math.max(0, b.broodTimer || 0))) / 1000).toFixed(1)}s / 5.5s`)}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                        ? 100
+                                        : Math.min(100, Math.max(0, ((5500 - Math.max(0, b.broodTimer || 0)) / 5500) * 100))}%`,
+                                      height: '100%',
+                                      backgroundColor: b.isSpawningBrood ? '#ef4444' : '#f472b6',
+                                      boxShadow: '0 0 6px rgba(244, 114, 182, 0.7)',
+                                      transition: 'width 0.05s linear',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Rapier Ball Dynamic Combat Bar */}
+                            {b.type === BALL_TYPES.RAPIER && (
+                              <div className="hud-shield-charge-wrapper" title="Rapier: Spins normally; marks enemy on hit, aims 0.8s, and dashes forward with 28 DMG piercing thrust">
+                                <div className="hud-charge-label-row">
+                                  <span className="hud-charge-txt">
+                                    {b.rapierState === 'dashing'
+                                      ? 'DASH THRUST'
+                                      : b.rapierState === 'aiming'
+                                      ? 'AIMING THRUST'
+                                      : (b.rapierCooldown || 0) > 0
+                                      ? 'COOLDOWN'
+                                      : 'THRUST READY'}
+                                  </span>
+                                  <span className="hud-charge-numeric">
+                                    {b.rapierState === 'dashing'
+                                      ? 'STRIKING'
+                                      : b.rapierState === 'aiming'
+                                      ? `${(((800 - Math.max(0, b.rapierAimTimer || 0))) / 1000).toFixed(1)}s / 0.8s`
+                                      : (b.rapierCooldown || 0) > 0
+                                      ? `${(((b.rapierCooldown || 0)) / 1000).toFixed(1)}s`
+                                      : 'READY'}
+                                  </span>
+                                </div>
+                                <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
+                                  <div
+                                    style={{
+                                      width: b.rapierState === 'dashing'
+                                        ? '100%'
+                                        : b.rapierState === 'aiming'
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.rapierAimTimer || 0) / 800) * 100))}%`
+                                        : (b.rapierCooldown || 0) > 0
+                                        ? `${Math.max(0, Math.min(100, (1 - (b.rapierCooldown || 0) / 2800) * 100))}%`
+                                        : '100%',
+                                      height: '100%',
+                                      backgroundColor: b.rapierState === 'dashing' ? '#fbbf24' : (b.rapierState === 'aiming' ? '#f43f5e' : ((b.rapierCooldown || 0) > 0 ? '#64748b' : '#f43f5e')),
+                                      boxShadow: b.rapierState === 'dashing' ? '0 0 8px rgba(251, 191, 36, 0.9)' : (b.rapierState === 'aiming' ? '0 0 8px rgba(244, 63, 94, 0.8)' : 'none'),
                                       transition: 'width 0.05s linear',
                                     }}
                                   />
@@ -7919,6 +9758,15 @@ function BallBattleGame() {
 
                             {/* Row 4: SVG Icons of Effects (No emojis) */}
                             <div className="hud-row-effects">
+                              {b.type === BALL_TYPES.MOTHER && (
+                                <span
+                                  className="hud-effect-badge brood-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'BROOD')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BroodIcon size={13} color="#f472b6" /> BROOD
+                                </span>
+                              )}
                               {b.bleedTicksLeft > 0 && (
                                 <span
                                   className="hud-effect-badge bleed-active"
@@ -7953,6 +9801,33 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <SpitFireTargetIcon size={13} color="#38bdf8" /> FLAME LOCK ({(b.spitFireTargetTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                                                            {b.knockbackTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge knockback-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'KNOCKBACK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <KnockbackIcon size={13} color="#a5b4fc" /> KNOCKBACK ({(b.knockbackTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.daggerMarkTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge dagger-mark-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'DAGGER_MARK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <DaggerIcon size={13} color="#14b8a6" /> DAGGER MARK ({(b.daggerMarkTimer / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                              {b.rapierMarkTimer > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge rapier-mark-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'RAPIER_MARK')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <RapierIcon size={13} color="#f43f5e" /> RAPIER MARK ({(b.rapierMarkTimer / 1000).toFixed(1)}s)
                                 </span>
                               )}
                               {b.isSlowed && !b.isDead && (
@@ -7991,6 +9866,42 @@ function BallBattleGame() {
                                   <KnifeIcon size={13} color="#94a3b8" /> KNIFE
                                 </span>
                               )}
+                                                                                          {b.type === BALL_TYPES.SLOW && (
+                                <>
+                                  <span
+                                    className="hud-effect-badge heavy-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'HEAVY')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <HeavyIcon size={13} color="#f59e0b" /> HEAVY
+                                  </span>
+                                  <span
+                                    className="hud-effect-badge tower-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'TOWER')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <TowerIcon size={13} color="#94a3b8" /> TOWER
+                                  </span>
+                                </>
+                              )}
+                              {b.type === BALL_TYPES.PRIEST && (
+                                <span
+                                  className={`hud-effect-badge ${b.blessActiveTimer > 0 ? 'blessing-active' : ''}`}
+                                  onMouseEnter={(e) => showTooltip(e, 'BLESSING')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <BlessIcon size={13} color="#f59e0b" /> BLESSING
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.PUSH && (
+                                <span
+                                  className={`hud-effect-badge ${b.pushActiveTimer > 0 ? 'push-active' : ''}`}
+                                  onMouseEnter={(e) => showTooltip(e, 'PUSH')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <PushIcon size={13} color="#818cf8" /> PUSH
+                                </span>
+                              )}
                               {b.type === BALL_TYPES.DAGGER && !b.isWeaponless && (
                                 <span
                                   className="hud-effect-badge dagger-active"
@@ -8017,6 +9928,24 @@ function BallBattleGame() {
                                 >
                                   <HammerIcon size={13} color="#b91c1c" /> HAMMER
                                 </span>
+                              )}
+                              {b.type === BALL_TYPES.RAPIER && (
+                                <>
+                                  <span
+                                    className={`hud-effect-badge ${b.dashTimer > 0 || b.rapierState === 'dashing' ? 'dash-active' : ''}`}
+                                    onMouseEnter={(e) => showTooltip(e, 'DASH')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <DashIcon size={13} color="#fbbf24" /> DASH
+                                  </span>
+                                  <span
+                                    className="hud-effect-badge rapier-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'RAPIER')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <RapierIcon size={13} color="#f43f5e" /> RAPIER
+                                  </span>
+                                </>
                               )}
                               {b.type === BALL_TYPES.GLASS && (
                                 <span
@@ -8048,6 +9977,13 @@ function BallBattleGame() {
                               {b.type === BALL_TYPES.STONE && (
                                 <>
                                   <span
+                                    className="hud-effect-badge hard-active"
+                                    onMouseEnter={(e) => showTooltip(e, 'HARD')}
+                                    onMouseLeave={hideTooltip}
+                                  >
+                                    <HardIcon size={13} color="#94a3b8" /> HARD
+                                  </span>
+                                  <span
                                     className="hud-effect-badge heavy-active"
                                     onMouseEnter={(e) => showTooltip(e, 'HEAVY')}
                                     onMouseLeave={hideTooltip}
@@ -8062,6 +9998,15 @@ function BallBattleGame() {
                                     <ArmorIcon size={13} color="#0284c7" /> ARMOR
                                   </span>
                                 </>
+                              )}
+                              {b.type === BALL_TYPES.STEEL && (
+                                <span
+                                  className="hud-effect-badge hard-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'HARD')}
+                                  onMouseLeave={hideTooltip}
+                                >
+                                  <HardIcon size={13} color="#94a3b8" /> HARD
+                                </span>
                               )}
                               {b.type === BALL_TYPES.FAST && (
                                 <span

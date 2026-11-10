@@ -44,8 +44,14 @@ const SFX_FILES = {
   diceRollMid: '/sfx/sfx-ball-roll-mid.mp3',
   diceRollLow: '/sfx/sfx-ball-roll-low.mp3',
   daggerHit: '/sfx/sfx-ball-dagger-hit.mp3',
+  daggerHitWall: '/sfx/sfx-ball-dagger-hit-wall.mp3',
   daggerPull: '/sfx/sfx-ball-dagger-pull.mp3',
   daggerThrow: '/sfx/sfx-ball-dagger-throw.mp3',
+  push1: '/sfx/sfx-ball-push.mp3',
+  push2: '/sfx/sfx-ball-push2.mp3',
+  bless1: '/sfx/sfx-ball-bless-1.mp3',
+  bless2: '/sfx/sfx-ball-bless-2.mp3',
+  bless3: '/sfx/sfx-ball-bless-3.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
@@ -74,8 +80,14 @@ const SOUND_COOLDOWNS = {
   growing: 80,
   shardHit: 45,
   daggerHit: 60,
+  daggerHitWall: 60,
   daggerPull: 60,
   daggerThrow: 60,
+  push1: 65,
+  push2: 65,
+  bless1: 80,
+  bless2: 80,
+  bless3: 80,
 };
 
 class SoundManager {
@@ -167,6 +179,17 @@ class SoundManager {
         audio.load();
       });
     });
+  }
+
+  playBless(volume = 0.95) {
+    const r = Math.random();
+    const sfx = r < 0.33 ? 'bless1' : (r < 0.66 ? 'bless2' : 'bless3');
+    return this.play(sfx, volume);
+  }
+
+  playPush(volumeMultiplier = 0.9) {
+    const sfx = Math.random() < 0.5 ? 'push1' : 'push2';
+    return this.play(sfx, volumeMultiplier);
   }
 
   play(soundName, volumeMultiplier = 1) {
