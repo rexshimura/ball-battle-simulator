@@ -47,11 +47,14 @@ const SFX_FILES = {
   daggerHitWall: '/sfx/sfx-ball-dagger-hit-wall.mp3',
   daggerPull: '/sfx/sfx-ball-dagger-pull.mp3',
   daggerThrow: '/sfx/sfx-ball-dagger-throw.mp3',
-  push1: '/sfx/sfx-ball-push.mp3',
-  push2: '/sfx/sfx-ball-push2.mp3',
+  pushCharge: '/sfx/sfx-ball-push-charge.mp3',
+  pushHit: '/sfx/sfx-ball-push-hit.mp3',
+  push1: '/sfx/sfx-ball-push-charge.mp3',
+  push2: '/sfx/sfx-ball-push-hit.mp3',
   bless1: '/sfx/sfx-ball-bless-1.mp3',
   bless2: '/sfx/sfx-ball-bless-2.mp3',
   bless3: '/sfx/sfx-ball-bless-3.mp3',
+  rapierDash: '/sfx/sfx-ball-rapier-dash.mp3',
 };
 
 // Default cooldowns (in milliseconds) between repeated triggers of the same sound
@@ -83,11 +86,14 @@ const SOUND_COOLDOWNS = {
   daggerHitWall: 60,
   daggerPull: 60,
   daggerThrow: 60,
+  pushCharge: 65,
+  pushHit: 65,
   push1: 65,
   push2: 65,
   bless1: 80,
   bless2: 80,
   bless3: 80,
+  rapierDash: 60,
 };
 
 class SoundManager {
@@ -187,9 +193,24 @@ class SoundManager {
     return this.play(sfx, volume);
   }
 
-  playPush(volumeMultiplier = 0.9) {
-    const sfx = Math.random() < 0.5 ? 'push1' : 'push2';
-    return this.play(sfx, volumeMultiplier);
+  playRapierDash(volume = 0.95) {
+    return this.play('rapierDash', volume);
+  }
+
+  playPushCharge(volume = 0.95) {
+    return this.play('pushCharge', volume);
+  }
+
+  playPushHit(volumeMultiplier = 1.0) {
+    return this.play('pushHit', volumeMultiplier);
+  }
+
+  playPush(volumeMultiplier = 1.0) {
+    return this.play('pushHit', volumeMultiplier);
+  }
+
+  playPush2(volumeMultiplier = 1.0) {
+    return this.play('pushHit', volumeMultiplier);
   }
 
   play(soundName, volumeMultiplier = 1) {

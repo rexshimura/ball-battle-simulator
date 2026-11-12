@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { BALL_CONFIGS, BALL_TYPES, TEAMS, RARITIES, RARITY_ORDER } from './ballConfig';
-import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, PushIcon, BlessIcon, TowerIcon, HardIcon, BroodIcon, RapierIcon, DashIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon, SpitFireIcon, SpitFireTargetIcon, SlowIcon, DaggerIcon } from './Icons';
+import { ShieldIcon, BladeIcon, SpikesIcon, ArmorIcon, HeavyIcon, RapidIcon, BleedIcon, SkullIcon, BrittleIcon, HammerIcon, KnockbackIcon, PushIcon, BlessIcon, TowerIcon, HardIcon, BroodIcon, RapierIcon, DashIcon, GrowIcon, VolumeIcon, VolumeMuteIcon, AlertTriangleIcon, ShardIcon, ShardTargetIcon, AccelerateIcon, GunIcon, ThornIcon, KnifeIcon, SplitIcon, FlameIcon, BurnIcon, HealIcon, SniperIcon, DiceIcon, SpitFireIcon, SpitFireTargetIcon, SlowIcon, DaggerIcon, PoisonIcon } from './Icons';
 import LaserFlow from './LaserFlow';
 import sound from './soundManager';
 import './App.css';
@@ -40,11 +40,17 @@ function getWeaponDamage(ball) {
 }
 
 const EFFECT_TOOLTIPS = {
+  POISON: {
+    title: 'POISON',
+    category: 'STATUS TAG',
+    icon: <PoisonIcon size={14} color="#10b981" />,
+    description: "Virulent stacking toxin. Deals -1 damage every 0.8s for 12 seconds per stack (-1, -2, -3...). Each subsequent hit from Poison Ball refreshes the 12s duration and adds another stack without limit.",
+  },
   BROOD: {
     title: 'BROOD',
     category: 'ABILITY (SELF)',
     icon: <BroodIcon size={14} color="#f472b6" />,
-    description: "Mother Ball is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby, Sword Baby, and Gun Baby up to 3 active baby balls.",
+    description: "Mother Ball is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby, Sword Baby, Gun Baby, and Dual Sword Baby up to 4 active baby balls.",
   },
   HARD: {
     title: 'HARD',
@@ -931,6 +937,76 @@ function drawBurningBallAnimation(ctx, ball, renderX, renderY) {
   ctx.restore();
 }
 
+// Virulent Poison aura and bubbling venom miasma for targets afflicted with Poison
+function drawPoisonedBallAnimation(ctx, ball, renderX, renderY) {
+  if (!ball.poisonStacks || ball.poisonStacks <= 0 || ball.isDead || ball.isDying) return;
+  const now = performance.now() * 0.001;
+  const r = ball.radius;
+  const stacks = ball.poisonStacks;
+
+  ctx.save();
+
+  // 1. Toxic Emerald Miasma Corona around victim
+  const auraGlow = ctx.createRadialGradient(renderX, renderY, r * 0.6, renderX, renderY, r * 1.5);
+  auraGlow.addColorStop(0, 'rgba(16, 185, 129, 0.45)');
+  auraGlow.addColorStop(0.6, 'rgba(5, 150, 105, 0.22)');
+  auraGlow.addColorStop(1, 'rgba(2, 44, 34, 0)');
+  ctx.fillStyle = auraGlow;
+  ctx.beginPath();
+  ctx.arc(renderX, renderY, r * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Rising toxic bubbles
+  const bubbleCount = Math.min(8, 3 + stacks);
+  for (let i = 0; i < bubbleCount; i++) {
+    const seed = i * 1.37;
+    const bubbleProgress = (now * 1.4 + seed) % 1.0;
+    const bAngle = -Math.PI / 2 + Math.sin(seed * 4 + now * 2) * 0.9;
+    const bDist = r * (0.4 + bubbleProgress * 0.9);
+    const bx = renderX + Math.cos(bAngle) * bDist + Math.sin(now * 5 + seed) * 3;
+    const by = renderY + Math.sin(bAngle) * bDist - (bubbleProgress * 12);
+    const bSize = Math.max(1.2, (1 - bubbleProgress) * 3.5);
+
+    ctx.fillStyle = 'rgba(52, 211, 153, ' + (1 - bubbleProgress * 0.8) + ')';
+    ctx.beginPath();
+    ctx.arc(bx, by, bSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Poison tick flash burst
+  if ((ball.poisonFlashTimer || 0) > 0) {
+    const flashProg = Math.max(0, ball.poisonFlashTimer / 200);
+    ctx.globalAlpha = flashProg;
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = Math.max(1.2, 3 * flashProg);
+    ctx.beginPath();
+    ctx.arc(renderX, renderY, r * (1.05 + (1 - flashProg) * 0.5), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 4. Subtle stack count badge above victim
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = 'rgba(2, 44, 34, 0.8)';
+  ctx.strokeStyle = 'rgba(16, 185, 129, 0.85)';
+  ctx.lineWidth = 1;
+  const badgeW = 28 + (stacks >= 10 ? 8 : 0);
+  const badgeH = 14;
+  const badgeX = renderX - badgeW / 2;
+  const badgeY = renderY - r - 18;
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#34d399';
+  ctx.font = 'bold 9px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`☣ x${stacks}`, renderX, badgeY + badgeH / 2);
+
+  ctx.restore();
+}
+
 // Tactical lock-on targeting reticle for enemy marked by Spit Fire Ball (active for 5 seconds)
 function drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight) {
   if (!ball.spitFireTargetTimer || ball.spitFireTargetTimer <= 0 || ball.isDead || ball.isDying) return;
@@ -1129,6 +1205,31 @@ function drawRapierMarkReticle(ctx, ball, renderX, renderY, isLight) {
   ctx.restore();
 }
 
+// Simplified, sleek kinetic repulsor radius indicator around Push Ball when Ready
+function drawPushRadiusField(ctx, ball, x, y, isLight) {
+  if (!ball.hasPushCharge || ball.isDead || ball.isDying) return;
+  const pushRadius = ball.config?.pushRadius || 135;
+  const fieldR = ball.radius + pushRadius;
+
+  ctx.save();
+
+  // Subtle translucent radius fill
+  ctx.fillStyle = isLight ? 'rgba(99, 102, 241, 0.025)' : 'rgba(99, 102, 241, 0.035)';
+  ctx.beginPath();
+  ctx.arc(x, y, fieldR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Clean, thin dashed radius perimeter
+  ctx.strokeStyle = isLight ? 'rgba(99, 102, 241, 0.45)' : 'rgba(165, 180, 252, 0.55)';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.arc(x, y, fieldR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 // Render embedded combat daggers stuck in victim body
 function drawStuckDaggers(ctx, ball, renderX, renderY) {
   if (!ball.stuckDaggers || ball.stuckDaggers.length === 0 || ball.isDead || ball.isDying) return;
@@ -1232,10 +1333,10 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
     }
   }
 
-  // Rotating sword for Sword Ball, Dual Sword Ball & Baby Sword Ball (front and back swords)
-  if (config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.BABY_SWORD) {
-    const isDual = config.id === BALL_TYPES.DUAL_SWORD;
-    const isBaby = config.id === BALL_TYPES.BABY_SWORD;
+  // Rotating sword for Sword Ball, Dual Sword Ball, Baby Sword Ball & Baby Dual Sword Ball
+  if (config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.BABY_SWORD || config.id === BALL_TYPES.BABY_DUAL_SWORD) {
+    const isDual = config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.BABY_DUAL_SWORD;
+    const isBaby = config.id === BALL_TYPES.BABY_SWORD || config.id === BALL_TYPES.BABY_DUAL_SWORD;
     const angles = isDual ? [0, Math.PI] : [0];
 
     angles.forEach(offsetAng => {
@@ -1244,7 +1345,7 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.rotate(rotationAngle + offsetAng);
 
       const scale = radius / (config.radius || 38);
-      const bladeLength = (config.bladeLength || (isBaby ? 28 : (isDual ? 56 : 82))) * (radius < 25 ? scale : 1);
+      const bladeLength = (config.bladeLength || (isBaby ? (isDual ? 22 : 26) : (isDual ? 56 : 82))) * (radius < 25 ? scale : 1);
       const bladeGrad = ctx.createLinearGradient(radius - 2, 0, radius + bladeLength, 0);
 
       if (isHit) {
@@ -2441,47 +2542,30 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.restore();
     }
 
-    // Rapier Ball: Aristocratic duelist sash, golden fencing crest & luminous ruby core
+    // Rapier Ball: Simple sleek body like Dagger Ball in duelist blue
     if (config.id === BALL_TYPES.RAPIER) {
       ctx.save();
       ctx.clip();
       const isAiming = extraData?.isAiming;
       const isDashing = extraData?.isDashing;
 
-      // Crimson duelist sash across body
-      ctx.fillStyle = isDashing ? 'rgba(244, 63, 94, 0.45)' : 'rgba(244, 63, 94, 0.25)';
-      ctx.beginPath();
-      ctx.moveTo(x - radius, y - radius * 0.4);
-      ctx.lineTo(x + radius, y + radius * 0.4);
-      ctx.lineTo(x + radius, y + radius * 0.7);
-      ctx.lineTo(x - radius, y - radius * 0.1);
-      ctx.closePath();
-      ctx.fill();
+      // Clean, simple duelist blue sheen (simple like Dagger Ball)
+      if (isDashing || isAiming) {
+        ctx.fillStyle = isDashing ? 'rgba(96, 165, 250, 0.45)' : 'rgba(59, 130, 246, 0.25)';
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.75, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Golden fencing cross emblem
-      ctx.strokeStyle = isDashing ? '#fbbf24' : (isAiming ? '#f43f5e' : 'rgba(251, 191, 36, 0.75)');
-      ctx.lineWidth = 1.6;
-      ctx.shadowColor = isDashing ? '#fbbf24' : '#f43f5e';
-      ctx.shadowBlur = (isAiming || isDashing) ? 10 : 3;
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 1.4;
+        ctx.shadowColor = '#60a5fa';
+        ctx.shadowBlur = isDashing ? 10 : 4;
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
 
-      const crestR = radius * 0.42;
-      ctx.beginPath();
-      ctx.moveTo(x - crestR, y);
-      ctx.lineTo(x + crestR, y);
-      ctx.moveTo(x, y - crestR);
-      ctx.lineTo(x, y + crestR);
-      ctx.stroke();
-
-      // Central duelist ruby gem
-      ctx.fillStyle = isDashing ? '#ffffff' : (isAiming ? '#fb7185' : '#e11d48');
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#fbbf24';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-
-      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -2584,6 +2668,57 @@ function draw3DBall(ctx, x, y, radius, config, teamColor, rotationAngle = 0, isH
       ctx.shadowBlur = 6;
       ctx.fill();
 
+      ctx.restore();
+    }
+
+    // Poison Ball: Toxic bubbling venom core & virulent biohazard droplets
+    if (config.id === BALL_TYPES.POISON) {
+      ctx.save();
+      ctx.clip();
+      const now = performance.now() * 0.003;
+      const spin = rotationAngle !== undefined && rotationAngle !== 0 ? rotationAngle : (now * 1.2);
+
+      // Bubbling toxic micro-droplets on sphere
+      const bubbleOffsets = [
+        { angle: spin, rDist: radius * 0.45, size: radius * 0.18 },
+        { angle: spin + 2.1, rDist: radius * 0.52, size: radius * 0.14 },
+        { angle: spin + 4.2, rDist: radius * 0.40, size: radius * 0.16 },
+        { angle: spin + 1.1, rDist: radius * 0.25, size: radius * 0.12 },
+      ];
+
+      bubbleOffsets.forEach(b => {
+        const bx = x + Math.cos(b.angle) * b.rDist;
+        const by = y + Math.sin(b.angle) * b.rDist;
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.65)';
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(bx, by, b.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(bx - b.size * 0.35, by - b.size * 0.35, b.size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Central virulent venom droplet core
+      ctx.fillStyle = '#10b981';
+      ctx.shadowColor = '#34d399';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(x, y + radius * 0.05, radius * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sharp venom droplet tip pointing up
+      ctx.beginPath();
+      ctx.moveTo(x - radius * 0.16, y);
+      ctx.lineTo(x, y - radius * 0.38);
+      ctx.lineTo(x + radius * 0.16, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -2842,7 +2977,7 @@ function BallThumbnailPreview({ config, theme }) {
     const isFire = config.id === BALL_TYPES.FIRE || config.id === BALL_TYPES.SPIT_FIRE;
     const previewRadius = isFire ? 12 : Math.min(20, config.radius * 0.54);
     const previewY = isFire ? 44 : 32;
-    const isSword = config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.RAPIER;
+    const isSword = config.id === BALL_TYPES.SWORD || config.id === BALL_TYPES.DUAL_SWORD || config.id === BALL_TYPES.RAPIER || config.id === BALL_TYPES.BABY_SWORD || config.id === BALL_TYPES.BABY_DUAL_SWORD;
     const rotation = isSword ? -0.4 : ((config.id === BALL_TYPES.KNIFE || config.id === BALL_TYPES.DAGGER) ? -0.42 : (config.id === BALL_TYPES.GUN ? -0.48 : (config.id === BALL_TYPES.SNIPER ? -0.48 : (config.id === BALL_TYPES.THORN ? 0.25 : (isFire ? 0.35 : 0)))));
     const diceState = config.id === BALL_TYPES.DICE ? { value: 1, isRolling: false, tier: 'low', popScale: 1.0 } : null;
     draw3DBall(ctx, 32, previewY, previewRadius, config, null, rotation, false, 0, theme, [], { vx: 0, vy: 0 }, diceState);
@@ -3146,6 +3281,14 @@ function BallBattleGame() {
         burnTimer: 0,
         burnSource: null,
         burnQueue: [],
+        poisonStacks: 0,
+        poisonDuration: 0,
+        poisonTickTimer: 0,
+        poisonFlashTimer: 0,
+        poisonSource: null,
+        healTicksLeft: 0,
+        healTimer: 0,
+        healQueue: [],
         isBlueBurn: false,
         burnFlashTimer: 0,
         isDead: false,
@@ -3183,6 +3326,10 @@ function BallBattleGame() {
         dashTimer: 0,
         rapierMarkTimer: 0,
         hasPushCharge: false,
+        isPushActive: false,
+        pushTierIndex: 0,
+        pushCooldownTimer: 0,
+        pushArmTimer: 0,
         pushAngle: b.angle || 0,
         blessTimer: b.type === BALL_TYPES.PRIEST ? (b.config?.blessCooldown || 9000) : 0,
         blessActiveTimer: 0,
@@ -3557,6 +3704,21 @@ function BallBattleGame() {
         life: 1.0,
         decay: 0.018,
         vy: -1.3,
+      });
+    };
+
+    const spawnPoisonText = (x, y, amount) => {
+      const offsetX = (Math.random() - 0.5) * 12;
+      physicsRef.current.damageTexts.push({
+        x: x + offsetX,
+        y: y - 14,
+        text: `-${Math.round(amount)}`,
+        fontSize: 18,
+        opacity: 1.0,
+        isPoison: true,
+        life: 1.0,
+        decay: 0.022,
+        vy: -0.65,
       });
     };
 
@@ -4315,6 +4477,51 @@ function BallBattleGame() {
           }
         }
 
+        // Process Virulent Stacking Poison (12s duration, -1/tick per stack every 0.8s, stacks limitless)
+        if (ball.poisonStacks > 0 && !ball.isDead) {
+          ball.poisonDuration = Math.max(0, (ball.poisonDuration || 0) - safeDt * 1000);
+          if (ball.poisonDuration <= 0) {
+            // 12s expired without a follow-up hit: poison clears completely
+            ball.poisonStacks = 0;
+            ball.poisonTickTimer = 0;
+          } else {
+            ball.poisonTickTimer = (ball.poisonTickTimer !== undefined ? ball.poisonTickTimer : 800) - safeDt * 1000;
+            if (ball.poisonTickTimer <= 0) {
+              ball.poisonTickTimer = 800; // deals damage every 0.8 seconds
+              const tickDmg = ball.poisonStacks; // 1 stack = 1 DMG, 2 stacks = 2 DMG, n stacks = n DMG
+              ball.poisonFlashTimer = 200;
+              applyDamage(ball, tickDmg, ball.poisonSource || ball, false);
+              spawnPoisonText(ball.x, ball.y, tickDmg);
+
+              // Venom bubbling particle burst
+              spawnParticles(ball.x, ball.y, '#10b981', 6, 1.2);
+              spawnParticles(ball.x, ball.y, '#34d399', 4, 1.4);
+              sound.play('thornHit', 0.65);
+            }
+          }
+        }
+        if (ball.poisonFlashTimer > 0) ball.poisonFlashTimer = Math.max(0, ball.poisonFlashTimer - safeDt * 1000);
+
+        // Process Heal Status Effect (queue-based healing ticks: +5, +3, +1, +1)
+        if (ball.healTicksLeft > 0 && !ball.isDead) {
+          ball.healTimer = (ball.healTimer !== undefined ? ball.healTimer : 450) - safeDt * 1000;
+          if (ball.healTimer <= 0) {
+            ball.healTicksLeft -= 1;
+            ball.healTimer = 450;
+            const tickHeal = (ball.healQueue && ball.healQueue.length > 0) ? ball.healQueue.shift() : 1;
+            if (ball.hp < ball.maxHp) {
+              const prevHp = ball.hp;
+              ball.hp = Math.min(ball.maxHp, ball.hp + tickHeal);
+              const actual = ball.hp - prevHp;
+              if (actual > 0) spawnHealText(ball.x, ball.y, actual);
+            }
+            ball.healFlashTimer = 350;
+            spawnParticles(ball.x, ball.y, '#34d399', 6, 1.2);
+            spawnParticles(ball.x, ball.y, '#fde047', 4, 1.4);
+            sound.play('heal', 0.7);
+          }
+        }
+
         if (ball.type === BALL_TYPES.SWORD || ball.type === BALL_TYPES.DUAL_SWORD) {
           if (ball.swordHitFreezeTimer > 0) {
             ball.swordHitFreezeTimer = Math.max(0, ball.swordHitFreezeTimer - safeDt * 1000);
@@ -4360,8 +4567,8 @@ function BallBattleGame() {
           ball.pushAngle = ((ball.pushAngle || 0) + 0.04) % (Math.PI * 2);
         }
 
-        // Baby Sword Ball: Spinning mini blade
-        if (ball.type === BALL_TYPES.BABY_SWORD && !ball.isDead && !ball.isDying) {
+        // Baby Sword Ball & Baby Dual Sword Ball: Spinning mini blade
+        if ((ball.type === BALL_TYPES.BABY_SWORD || ball.type === BALL_TYPES.BABY_DUAL_SWORD) && !ball.isDead && !ball.isDying) {
           if (ball.swordHitFreezeTimer > 0) {
             ball.swordHitFreezeTimer = Math.max(0, ball.swordHitFreezeTimer - safeDt * 1000);
           } else {
@@ -4678,10 +4885,9 @@ function BallBattleGame() {
           }
         }
 
-        // Priest Ball: Blessing Canvas-wide AOE Heal after 9s (divided by number of allies)
+        // Priest Ball: Blessing Canvas-wide AOE Heal after 9s (inflicts Heal +5, +3, +1, +1 to self & allies, not divided!)
         if (ball.type === BALL_TYPES.PRIEST && !ball.isDead && !ball.isDying && !isSoloWinner) {
           const blessCooldown = ball.config?.blessCooldown || 9000;
-          const totalPool = ball.config?.blessPool || 24;
 
           if (ball.blessTimer === undefined) ball.blessTimer = blessCooldown;
           ball.blessTimer = Math.max(0, ball.blessTimer - safeDt * 1000);
@@ -4695,33 +4901,18 @@ function BallBattleGame() {
             // Find all living allies across the ENTIRE canvas
             const livingAllies = balls.filter(other => other.team === ball.team && other.id !== ball.id && !other.isDead && !other.isDying);
 
-            // Heal is divided evenly among beneficiaries (self + all living allies across canvas)
-            const recipientCount = 1 + livingAllies.length;
-            const healAmount = Math.max(4, Math.round(totalPool / recipientCount));
+            // Inflicts Heal (+5, +3, +1, +1 over time) to self and all living allies (not divided!)
+            const applyPriestHeal = (target) => {
+              target.healTicksLeft = 4;
+              target.healTimer = 100; // first tick triggers right away
+              target.healQueue = [5, 3, 1, 1];
+              target.healFlashTimer = 500;
+              spawnParticles(target.x, target.y, '#fde047', 12, 2.0);
+              spawnParticles(target.x, target.y, '#34d399', 8, 1.4);
+            };
 
-            // Heal self
-            if (ball.hp < ball.maxHp) {
-              const prev = ball.hp;
-              ball.hp = Math.min(ball.maxHp, ball.hp + healAmount);
-              const actual = ball.hp - prev;
-              if (actual > 0) spawnHealText(ball.x, ball.y, actual);
-            }
-            ball.healFlashTimer = 500;
-            spawnParticles(ball.x, ball.y, '#fde047', 16, 2.2);
-            spawnParticles(ball.x, ball.y, '#34d399', 10, 1.6);
-
-            // Heal all living allies across the canvas
-            livingAllies.forEach(ally => {
-              if (ally.hp < ally.maxHp) {
-                const prev = ally.hp;
-                ally.hp = Math.min(ally.maxHp, ally.hp + healAmount);
-                const actual = ally.hp - prev;
-                if (actual > 0) spawnHealText(ally.x, ally.y, actual);
-              }
-              ally.healFlashTimer = 500;
-              spawnParticles(ally.x, ally.y, '#fde047', 12, 2.0);
-              spawnParticles(ally.x, ally.y, '#34d399', 8, 1.4);
-            });
+            applyPriestHeal(ball);
+            livingAllies.forEach(ally => applyPriestHeal(ally));
 
             // Divine blessing expanding ring across entire canvas
             if (!physicsRef.current.blessRings) physicsRef.current.blessRings = [];
@@ -4740,26 +4931,44 @@ function BallBattleGame() {
           ball.blessActiveTimer = Math.max(0, ball.blessActiveTimer - safeDt * 1000);
         }
 
-        // Push Ball: Conditional kinetic repulsor pulse (requires 1 hit to charge)
+        // Push Ball: Proximity Repulsor Radius (needs 1 hit to activate passive; once triggered, enters cooldown: 12s -> 10s -> 8s -> 6s -> 4s -> 2s)
         if (ball.type === BALL_TYPES.PUSH && !ball.isDead && !ball.isDying && !isSoloWinner) {
-          const pushRadius = ball.config?.pushRadius || 130;
+          const pushRadius = ball.config?.pushRadius || 135;
           const pushForce = ball.config?.pushForce || 10.5;
           const pushDamage = ball.config?.pushDamage || 6;
+          const tiers = ball.config?.pushCooldownTiers || [12000, 10000, 8000, 6000, 4000, 2000];
+
+          if (ball.pushArmTimer > 0) {
+            ball.pushArmTimer = Math.max(0, ball.pushArmTimer - safeDt * 1000);
+          }
+
+          // If passive is activated but repulsor is cooling down, tick cooldown
+          if (ball.isPushActive && !ball.hasPushCharge) {
+            ball.pushCooldownTimer = Math.max(0, (ball.pushCooldownTimer || 0) - safeDt * 1000);
+            if (ball.pushCooldownTimer <= 0) {
+              ball.hasPushCharge = true;
+              ball.pushArmTimer = 100;
+              sound.playPushCharge(0.95);
+              spawnParticles(ball.x, ball.y, '#818cf8', 10, 1.8);
+            }
+          }
 
           const livingEnemies = balls.filter(other => other.team !== ball.team && !other.isDead && !other.isDying);
           const nearbyEnemies = livingEnemies.filter(e => {
             const d = Math.hypot(e.x - ball.x, e.y - ball.y);
-            return d < (ball.radius + pushRadius);
+            return d < (ball.radius + pushRadius + (e.radius || 34) * 0.5);
           });
 
-          // Trigger shockwave when Push Ball has a charge and enemies are within range
-          if (ball.hasPushCharge && nearbyEnemies.length > 0) {
-            // Consume the charge! Needs to hit another enemy to charge again
+          // Trigger shockwave when Push Ball is active, armed (ready) and any enemy ball comes near its radius!
+          if (ball.isPushActive && ball.hasPushCharge && (!ball.pushArmTimer || ball.pushArmTimer <= 0) && nearbyEnemies.length > 0) {
+            // Once used, its push effect turns off and enters cooldown according to current tier
             ball.hasPushCharge = false;
+            const curTier = Math.min(ball.pushTierIndex || 0, tiers.length - 1);
+            ball.pushCooldownTimer = tiers[curTier];
             ball.pushActiveTimer = 1000;
 
-            // Play random push variety SFX
-            sound.playPush(0.95);
+            // Play push SFX (specifically uses sfx-ball-push-hit.mp3)
+            sound.playPushHit(1.0);
 
             // Spawn expanding kinetic shockwave visual
             if (!physicsRef.current.pushShockwaves) physicsRef.current.pushShockwaves = [];
@@ -4769,8 +4978,8 @@ function BallBattleGame() {
               radius: ball.radius,
               maxRadius: ball.radius + pushRadius,
               life: 1.0,
-              decay: 0.05,
-              color: '#6366f1'
+              decay: 0.045,
+              color: '#818cf8'
             });
 
             // Push each nearby enemy away violently and inflict Knockback + Damage (Tower effect is immune)
@@ -4793,8 +5002,8 @@ function BallBattleGame() {
               applyDamage(enemy, pushDamage, ball, false);
 
               // Kinetic shockwave impact particles
-              spawnParticles(enemy.x, enemy.y, isTower ? '#94a3b8' : '#818cf8', 10, 2.0);
-              spawnParticles(enemy.x, enemy.y, isTower ? '#cbd5e1' : '#c7d2fe', 6, 1.4);
+              spawnParticles(enemy.x, enemy.y, isTower ? '#94a3b8' : '#818cf8', 12, 2.2);
+              spawnParticles(enemy.x, enemy.y, isTower ? '#cbd5e1' : '#c7d2fe', 8, 1.5);
             });
           }
         }
@@ -4902,10 +5111,10 @@ function BallBattleGame() {
           }
         }
 
-        // Mother Ball: Brood Birthing (Very slow, stops moving while birthing, costs 5 HP, cycles 3 baby types)
+        // Mother Ball: Brood Birthing (Very slow, stops moving while birthing, costs 5 HP, cycles 4 baby types, max 4 active)
         if (ball.type === BALL_TYPES.MOTHER && !ball.isDead && !ball.isDying && !isSoloWinner) {
           const broodCooldown = ball.config?.broodCooldown || 5500;
-          const broodMaxCap = ball.config?.broodMaxCap || 3;
+          const broodMaxCap = ball.config?.broodMaxCap || 4;
           const hpCost = ball.config?.broodHpCost || 5;
 
           if (ball.broodTimer === undefined) ball.broodTimer = broodCooldown;
@@ -4944,9 +5153,10 @@ function BallBattleGame() {
               const babyType = BALL_TYPES[ball.broodNextType] || BALL_TYPES.BABY_NORMAL;
               const babyCfg = BALL_CONFIGS[babyType] || BALL_CONFIGS[BALL_TYPES.BABY_NORMAL];
 
-              // Cycle sequence: BABY_NORMAL -> BABY_SWORD -> BABY_GUN -> BABY_NORMAL
+              // Cycle sequence: BABY_NORMAL -> BABY_SWORD -> BABY_GUN -> BABY_DUAL_SWORD -> BABY_NORMAL
               if (ball.broodNextType === 'BABY_NORMAL') ball.broodNextType = 'BABY_SWORD';
               else if (ball.broodNextType === 'BABY_SWORD') ball.broodNextType = 'BABY_GUN';
+              else if (ball.broodNextType === 'BABY_GUN') ball.broodNextType = 'BABY_DUAL_SWORD';
               else ball.broodNextType = 'BABY_NORMAL';
 
               const birthAngle = Math.random() * Math.PI * 2;
@@ -4984,6 +5194,14 @@ function BallBattleGame() {
                 burnTimer: 0,
                 burnSource: null,
                 burnQueue: [],
+                poisonStacks: 0,
+                poisonDuration: 0,
+                poisonTickTimer: 0,
+                poisonFlashTimer: 0,
+                poisonSource: null,
+                healTicksLeft: 0,
+                healTimer: 0,
+                healQueue: [],
                 isBlueBurn: false,
                 burnFlashTimer: 0,
                 isDead: false,
@@ -4996,9 +5214,9 @@ function BallBattleGame() {
                 swordAngle: birthAngle,
                 swordSpeed: 0.08,
                 swordHitFreezeTimer: 0,
-                hasSword: babyType === BALL_TYPES.BABY_SWORD,
-                bladeLength: babyCfg.bladeLength || 26,
-                bladeDamage: babyCfg.bladeDamage || 12,
+                hasSword: babyType === BALL_TYPES.BABY_SWORD || babyType === BALL_TYPES.BABY_DUAL_SWORD,
+                bladeLength: babyCfg.bladeLength || (babyType === BALL_TYPES.BABY_DUAL_SWORD ? 22 : 26),
+                bladeDamage: babyCfg.bladeDamage || (babyType === BALL_TYPES.BABY_DUAL_SWORD ? 9 : 12),
                 gunAngle: birthAngle,
                 gunSpeed: 0.05,
                 gunCooldown: babyCfg.gunCooldown || 3500,
@@ -5447,18 +5665,36 @@ function BallBattleGame() {
               applyDamage(b2, dmgB1ToB2, b1);
               applyDamage(b1, dmgB2ToB1, b2);
 
-              // Push Ball: hitting an enemy grants 1 Push Charge
-              if (b1.type === BALL_TYPES.PUSH && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
-                if (!b1.hasPushCharge) {
-                  b1.hasPushCharge = true;
-                  spawnParticles(b1.x, b1.y, '#818cf8', 8, 1.5);
+              // Push Ball: hitting an enemy activates passive or progressively lowers cooldown tier (12s -> 10s -> 8s -> 6s -> 4s -> 2s)
+              const handlePushHit = (pushBall, victim) => {
+                const tiers = pushBall.config?.pushCooldownTiers || [12000, 10000, 8000, 6000, 4000, 2000];
+                if (!pushBall.isPushActive) {
+                  pushBall.isPushActive = true;
+                  pushBall.pushTierIndex = 0;
+                  pushBall.hasPushCharge = true;
+                  pushBall.pushCooldownTimer = 0;
+                  pushBall.pushArmTimer = 350; // arming delay so current hit rebound clears before proximity repulsor fires
+                  sound.playPushCharge(0.95);
+                  spawnParticles(pushBall.x, pushBall.y, '#818cf8', 14, 2.0);
+                } else {
+                  // Subsequent hits upgrade cooldown tier
+                  if (pushBall.pushTierIndex < tiers.length - 1) {
+                    pushBall.pushTierIndex += 1;
+                    const newMaxCd = tiers[pushBall.pushTierIndex];
+                    if (pushBall.pushCooldownTimer > newMaxCd) {
+                      pushBall.pushCooldownTimer = newMaxCd;
+                    }
+                    sound.playPushCharge(0.85);
+                    spawnParticles(pushBall.x, pushBall.y, '#a5b4fc', 10, 1.6);
+                  }
                 }
+              };
+
+              if (b1.type === BALL_TYPES.PUSH && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
+                handlePushHit(b1, b2);
               }
               if (b2.type === BALL_TYPES.PUSH && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
-                if (!b2.hasPushCharge) {
-                  b2.hasPushCharge = true;
-                  spawnParticles(b2.x, b2.y, '#818cf8', 8, 1.5);
-                }
+                handlePushHit(b2, b1);
               }
 
               // Dagger Ball Body hit marks enemy with Dagger Mark using bodyHit sound
@@ -5469,10 +5705,31 @@ function BallBattleGame() {
                 applyDaggerMark(b2, b1, true);
               }
 
+              // Poison Ball Body hit inflicts Virulent Poison that stacks infinitely (-1 dmg every 0.8s for 12s)
+              const applyPoison = (attacker, victim) => {
+                victim.poisonStacks = (victim.poisonStacks || 0) + 1;
+                victim.poisonDuration = 12000; // 12 seconds
+                if (!victim.poisonTickTimer || victim.poisonTickTimer <= 0) {
+                  victim.poisonTickTimer = 800; // 0.8s
+                }
+                victim.poisonSource = attacker;
+                victim.poisonFlashTimer = 220;
+                sound.play('thornHit', 0.8);
+                spawnParticles(victim.x, victim.y, '#10b981', 8, 1.4);
+                spawnParticles(victim.x, victim.y, '#34d399', 4, 1.8);
+              };
+
+              if (b1.type === BALL_TYPES.POISON && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
+                applyPoison(b1, b2);
+              }
+              if (b2.type === BALL_TYPES.POISON && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
+                applyPoison(b2, b1);
+              }
+
               // Rapier Ball Body hit: dashes deliver thrust impact, while spinning marks target
               if (b1.type === BALL_TYPES.RAPIER && b1.team !== b2.team && !b2.isDead && !b2.isDying) {
                 if (b1.rapierState === 'dashing') {
-                  const thrustDmg = b1.config?.dashDamage || 28;
+                  const thrustDmg = b1.config?.dashDamage || 11;
                   applyDamage(b2, thrustDmg, b1, true);
                   b2.rapierMarkTimer = 0;
                   b2.vx += Math.cos(b1.rapierAngle) * 7.5;
@@ -5489,7 +5746,7 @@ function BallBattleGame() {
               }
               if (b2.type === BALL_TYPES.RAPIER && b2.team !== b1.team && !b1.isDead && !b1.isDying) {
                 if (b2.rapierState === 'dashing') {
-                  const thrustDmg = b2.config?.dashDamage || 28;
+                  const thrustDmg = b2.config?.dashDamage || 11;
                   applyDamage(b1, thrustDmg, b2, true);
                   b1.rapierMarkTimer = 0;
                   b1.vx += Math.cos(b2.rapierAngle) * 7.5;
@@ -5507,10 +5764,10 @@ function BallBattleGame() {
             }
           }
 
-          if ((b1.type === BALL_TYPES.SWORD || b1.type === BALL_TYPES.DUAL_SWORD || b1.type === BALL_TYPES.BABY_SWORD) && b1.team !== b2.team && !b2.isDead) {
+          if ((b1.type === BALL_TYPES.SWORD || b1.type === BALL_TYPES.DUAL_SWORD || b1.type === BALL_TYPES.BABY_SWORD || b1.type === BALL_TYPES.BABY_DUAL_SWORD) && b1.team !== b2.team && !b2.isDead) {
             checkSwordHit(b1, b2);
           }
-          if ((b2.type === BALL_TYPES.SWORD || b2.type === BALL_TYPES.DUAL_SWORD || b2.type === BALL_TYPES.BABY_SWORD) && b2.team !== b1.team && !b1.isDead) {
+          if ((b2.type === BALL_TYPES.SWORD || b2.type === BALL_TYPES.DUAL_SWORD || b2.type === BALL_TYPES.BABY_SWORD || b2.type === BALL_TYPES.BABY_DUAL_SWORD) && b2.team !== b1.team && !b1.isDead) {
             checkSwordHit(b2, b1);
           }
 
@@ -6169,9 +6426,9 @@ function BallBattleGame() {
     };
 
     const checkSwordHit = (attacker, victim) => {
-      const isDual = attacker.type === BALL_TYPES.DUAL_SWORD;
-      const isBaby = attacker.type === BALL_TYPES.BABY_SWORD;
-      const bladeLen = attacker.config?.bladeLength || (isBaby ? 28 : (isDual ? 56 : 82));
+      const isDual = attacker.type === BALL_TYPES.DUAL_SWORD || attacker.type === BALL_TYPES.BABY_DUAL_SWORD;
+      const isBaby = attacker.type === BALL_TYPES.BABY_SWORD || attacker.type === BALL_TYPES.BABY_DUAL_SWORD;
+      const bladeLen = attacker.config?.bladeLength || (isBaby ? (isDual ? 22 : 26) : (isDual ? 56 : 82));
       const angles = isDual ? [attacker.swordAngle, attacker.swordAngle + Math.PI] : [attacker.swordAngle];
 
       for (let i = 0; i < angles.length; i++) {
@@ -6182,8 +6439,7 @@ function BallBattleGame() {
 
         const d = Math.hypot(victim.x - bladeX, victim.y - bladeY);
         if (d < victim.radius + bladeLen * 0.48 && victim.invulnerableTimer <= 0) {
-          // Blade hitbox deals high damage (18 DMG for Dual Sword, 22 DMG for Sword)
-          const bladeDmg = attacker.config?.bladeDamage || (isDual ? 18 : 22);
+          const bladeDmg = attacker.config?.bladeDamage || (isBaby ? (isDual ? 9 : 12) : (isDual ? 12 : 16));
           applyDamage(victim, bladeDmg, attacker, true);
           victim.invulnerableTimer = 220;
 
@@ -6238,8 +6494,8 @@ function BallBattleGame() {
       const d = Math.hypot(victim.x - tipX, victim.y - tipY);
       if (d < victim.radius + rapierLen * 0.44 && victim.invulnerableTimer <= 0) {
         if (attacker.rapierState === 'dashing') {
-          // Lethal 28 DMG dash thrust impact
-          const thrustDmg = attacker.config?.dashDamage || 28;
+          // Lethal dash thrust impact (11 DMG)
+          const thrustDmg = attacker.config?.dashDamage || 11;
           applyDamage(victim, thrustDmg, attacker, true);
           victim.invulnerableTimer = 220;
           victim.rapierMarkTimer = 0;
@@ -6260,8 +6516,8 @@ function BallBattleGame() {
           attacker.vx *= 0.25;
           attacker.vy *= 0.25;
         } else if (attacker.rapierState === 'spinning' && (attacker.rapierCooldown || 0) <= 0) {
-          // Normal rapier blade contact: 12 weapon DMG + marks enemy to initiate aim & dash thrust!
-          const weaponDmg = attacker.config?.rapierDamage || 12;
+          // Normal rapier blade contact: 7 weapon DMG + marks enemy to initiate aim & dash thrust!
+          const weaponDmg = attacker.config?.rapierDamage || 7;
           applyDamage(victim, weaponDmg, attacker, true);
           victim.invulnerableTimer = 200;
           sound.play('swordHit', 0.85);
@@ -6993,6 +7249,11 @@ function BallBattleGame() {
           ctx.restore();
         }
 
+        // Push Ball: Draw visible kinetic repulsor radius forcefield when Push Effect is Ready
+        if (ball.type === BALL_TYPES.PUSH && ball.hasPushCharge && !ball.isDead && !ball.isDying && simState !== 'planning') {
+          drawPushRadiusField(ctx, ball, renderX, renderY, isLight);
+        }
+
         let currentRot = ball.angle || 0;
         if (simState !== 'planning') {
           if (ball.type === BALL_TYPES.FIRE || ball.type === BALL_TYPES.SPIT_FIRE) currentRot = ball.fireAngle || 0;
@@ -7058,6 +7319,7 @@ function BallBattleGame() {
         // Burning status, hit animation, and Spit Fire 3s Target Reticle
         if (simState !== 'planning') {
           drawBurningBallAnimation(ctx, ball, renderX, renderY);
+          drawPoisonedBallAnimation(ctx, ball, renderX, renderY);
           drawSpitFireTargetReticle(ctx, ball, renderX, renderY, isLight);
           drawDaggerMarkReticle(ctx, ball, renderX, renderY, isLight);
           drawRapierMarkReticle(ctx, ball, renderX, renderY, isLight);
@@ -7449,13 +7711,13 @@ function BallBattleGame() {
           ctx.font = `800 ${dt.fontSize}px "JetBrains Mono", monospace`;
           ctx.textAlign = 'center';
           if (isLight) {
-            ctx.shadowColor = dt.isHeal ? 'rgba(16, 185, 129, 0.45)' : (dt.isBurn ? 'rgba(234, 88, 12, 0.45)' : 'rgba(0,0,0,0.18)');
-            ctx.shadowBlur = (dt.isHeal || dt.isBurn) ? 6 : 4;
-            ctx.fillStyle = dt.isHeal ? '#059669' : (dt.isShieldAbsorb ? '#0284c7' : (dt.isBurn ? '#c2410c' : (dt.isCritical ? '#b91c1c' : '#dc2626')));
+            ctx.shadowColor = dt.isHeal ? 'rgba(16, 185, 129, 0.45)' : (dt.isPoison ? 'rgba(16, 185, 129, 0.55)' : (dt.isBurn ? 'rgba(234, 88, 12, 0.45)' : 'rgba(0,0,0,0.18)'));
+            ctx.shadowBlur = (dt.isHeal || dt.isPoison || dt.isBurn) ? 6 : 4;
+            ctx.fillStyle = dt.isHeal ? '#059669' : (dt.isPoison ? '#15803d' : (dt.isShieldAbsorb ? '#0284c7' : (dt.isBurn ? '#c2410c' : (dt.isCritical ? '#b91c1c' : '#dc2626'))));
           } else {
-            ctx.shadowColor = dt.isHeal ? '#10b981' : (dt.isBurn ? '#ea580c' : '#000000');
-            ctx.shadowBlur = (dt.isHeal || dt.isBurn) ? 8 : 6;
-            ctx.fillStyle = dt.isHeal ? '#34d399' : (dt.isShieldAbsorb ? '#38bdf8' : (dt.isBurn ? '#f97316' : (dt.isCritical ? '#f87171' : '#ef4444')));
+            ctx.shadowColor = dt.isHeal ? '#10b981' : (dt.isPoison ? '#10b981' : (dt.isBurn ? '#ea580c' : '#000000'));
+            ctx.shadowBlur = (dt.isHeal || dt.isPoison || dt.isBurn) ? 8 : 6;
+            ctx.fillStyle = dt.isHeal ? '#34d399' : (dt.isPoison ? '#4ade80' : (dt.isShieldAbsorb ? '#38bdf8' : (dt.isBurn ? '#f97316' : (dt.isCritical ? '#f87171' : '#ef4444'))));
           }
           ctx.fillText(dt.text, dt.x, dt.y);
           ctx.restore();
@@ -8721,12 +8983,12 @@ function BallBattleGame() {
 
                                                                                     {/* Priest Ball Divine Blessing Bar */}
                             {b.type === BALL_TYPES.PRIEST && (
-                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (heal is divided evenly among beneficiaries)">
+                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (inflicts Heal +5, +3, +1, +1 to self & allies)">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt">DIVINE BLESSING</span>
                                   <span className="hud-charge-numeric">
                                     {(b.blessTimer || 0) <= 0
-                                      ? 'READY'
+                                      ? 'READY (+5 +3 +1 +1)'
                                       : `${(((9000 - Math.max(0, b.blessTimer || 0))) / 1000).toFixed(1)}s / 9.0s`}
                                   </span>
                                 </div>
@@ -8743,23 +9005,33 @@ function BallBattleGame() {
                                 </div>
                               </div>
                             )}
-                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Charge) */}
+                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Activate & 12s -> 2s Cooldown) */}
                             {b.type === BALL_TYPES.PUSH && (
-                              <div className="hud-shield-charge-wrapper" title="Kinetic Push: Needs 1 hit to charge repulsor pulse. Pushes nearby enemies away upon activation, then needs another hit.">
+                              <div className="hud-shield-charge-wrapper" title="Kinetic Repulsor: Needs 1 hit to activate passive. Once triggered, repels nearby enemies and enters cooldown (12s -> 10s -> 8s -> 6s -> 4s -> 2s on subsequent hits).">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt">REPULSOR CHARGE</span>
+                                  <span className="hud-charge-txt">
+                                    {!b.isPushActive ? 'PASSIVE: 0 / 1 HIT' : (b.hasPushCharge ? 'REPULSOR READY' : 'RECHARGING REPULSOR')}
+                                  </span>
                                   <span className="hud-charge-numeric">
-                                    {b.hasPushCharge ? 'READY' : '0 / 1 HIT'}
+                                    {!b.isPushActive
+                                      ? 'INACTIVE'
+                                      : b.hasPushCharge
+                                      ? `READY (${[12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12}s CD)`
+                                      : `${((b.pushCooldownTimer || 0) / 1000).toFixed(1)}s / ${[12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12}s`}
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: b.hasPushCharge ? '100%' : '0%',
+                                      width: !b.isPushActive
+                                        ? '0%'
+                                        : b.hasPushCharge
+                                        ? '100%'
+                                        : `${Math.max(0, Math.min(100, (1 - (b.pushCooldownTimer || 0) / (([12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12) * 1000)) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.hasPushCharge ? '#818cf8' : '#6366f1',
                                       boxShadow: b.hasPushCharge ? '0 0 8px rgba(129, 140, 248, 0.8)' : 'none',
-                                      transition: 'width 0.2s ease',
+                                      transition: 'width 0.1s linear',
                                     }}
                                   />
                                 </div>
@@ -8818,14 +9090,14 @@ function BallBattleGame() {
 
                             {/* Mother Ball Brood Birthing Bar */}
                             {b.type === BALL_TYPES.MOTHER && (
-                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, and Gun Baby (max 3 active).">
+                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, Gun Baby, and Dual Sword Baby (max 4 active).">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt">
-                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '') : 'NORMAL'}`}
+                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '').replace('_', ' ') : 'NORMAL'}`}
                                   </span>
                                   <span className="hud-charge-numeric">
-                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
-                                      ? 'MAX BROOD (3/3)'
+                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 4)
+                                      ? 'MAX BROOD (4/4)'
                                       : (b.isSpawningBrood
                                         ? '-5 HP'
                                         : `${(((5500 - Math.max(0, b.broodTimer || 0))) / 1000).toFixed(1)}s / 5.5s`)}
@@ -8834,7 +9106,7 @@ function BallBattleGame() {
                                 <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 4)
                                         ? 100
                                         : Math.min(100, Math.max(0, ((5500 - Math.max(0, b.broodTimer || 0)) / 5500) * 100))}%`,
                                       height: '100%',
@@ -8917,6 +9189,26 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <BurnIcon size={13} color={b.isBlueBurn ? '#38bdf8' : '#f97316'} /> {b.isBlueBurn ? 'SCORCH' : 'BURN'}
+                                </span>
+                              )}
+                              {b.poisonStacks > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge poison-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'POISON')}
+                                  onMouseLeave={hideTooltip}
+                                  style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}
+                                >
+                                  <PoisonIcon size={13} color="#10b981" /> POISON ({b.poisonStacks}) - {(b.poisonDuration / 1000).toFixed(1)}s
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.POISON && (
+                                <span
+                                  className="hud-effect-badge poison-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'POISON')}
+                                  onMouseLeave={hideTooltip}
+                                  style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}
+                                >
+                                  <PoisonIcon size={13} color="#10b981" /> VIRULENT POISON
                                 </span>
                               )}
                               {b.shardTargetTimer > 0 && !b.isDead && (
@@ -9587,12 +9879,12 @@ function BallBattleGame() {
 
                                                                                     {/* Priest Ball Divine Blessing Bar */}
                             {b.type === BALL_TYPES.PRIEST && (
-                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (heal is divided evenly among beneficiaries)">
+                              <div className="hud-shield-charge-wrapper" title="Divine Blessing: Map-wide heal across the entire canvas after 9s (inflicts Heal +5, +3, +1, +1 to self & allies)">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt">DIVINE BLESSING</span>
                                   <span className="hud-charge-numeric">
                                     {(b.blessTimer || 0) <= 0
-                                      ? 'READY'
+                                      ? 'READY (+5 +3 +1 +1)'
                                       : `${(((9000 - Math.max(0, b.blessTimer || 0))) / 1000).toFixed(1)}s / 9.0s`}
                                   </span>
                                 </div>
@@ -9609,23 +9901,33 @@ function BallBattleGame() {
                                 </div>
                               </div>
                             )}
-                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Charge) */}
+                            {/* Push Ball Kinetic Repulsor Bar (Hit-to-Activate & 12s -> 2s Cooldown) */}
                             {b.type === BALL_TYPES.PUSH && (
-                              <div className="hud-shield-charge-wrapper" title="Kinetic Push: Needs 1 hit to charge repulsor pulse. Pushes nearby enemies away upon activation, then needs another hit.">
+                              <div className="hud-shield-charge-wrapper" title="Kinetic Repulsor: Needs 1 hit to activate passive. Once triggered, repels nearby enemies and enters cooldown (12s -> 10s -> 8s -> 6s -> 4s -> 2s on subsequent hits).">
                                 <div className="hud-charge-label-row">
-                                  <span className="hud-charge-txt">REPULSOR CHARGE</span>
+                                  <span className="hud-charge-txt">
+                                    {!b.isPushActive ? 'PASSIVE: 0 / 1 HIT' : (b.hasPushCharge ? 'REPULSOR READY' : 'RECHARGING REPULSOR')}
+                                  </span>
                                   <span className="hud-charge-numeric">
-                                    {b.hasPushCharge ? 'READY' : '0 / 1 HIT'}
+                                    {!b.isPushActive
+                                      ? 'INACTIVE'
+                                      : b.hasPushCharge
+                                      ? `READY (${[12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12}s CD)`
+                                      : `${((b.pushCooldownTimer || 0) / 1000).toFixed(1)}s / ${[12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12}s`}
                                   </span>
                                 </div>
                                 <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: b.hasPushCharge ? '100%' : '0%',
+                                      width: !b.isPushActive
+                                        ? '0%'
+                                        : b.hasPushCharge
+                                        ? '100%'
+                                        : `${Math.max(0, Math.min(100, (1 - (b.pushCooldownTimer || 0) / (([12, 10, 8, 6, 4, 2][b.pushTierIndex || 0] || 12) * 1000)) * 100))}%`,
                                       height: '100%',
                                       backgroundColor: b.hasPushCharge ? '#818cf8' : '#6366f1',
                                       boxShadow: b.hasPushCharge ? '0 0 8px rgba(129, 140, 248, 0.8)' : 'none',
-                                      transition: 'width 0.2s ease',
+                                      transition: 'width 0.1s linear',
                                     }}
                                   />
                                 </div>
@@ -9684,14 +9986,14 @@ function BallBattleGame() {
 
                             {/* Mother Ball Brood Birthing Bar */}
                             {b.type === BALL_TYPES.MOTHER && (
-                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, and Gun Baby (max 3 active).">
+                              <div className="hud-shield-charge-wrapper" title="Brood: Every 5.5s, stops moving to birth a baby ball (costs 5 HP). Cycles Tough Baby, Sword Baby, Gun Baby, and Dual Sword Baby (max 4 active).">
                                 <div className="hud-charge-label-row">
                                   <span className="hud-charge-txt">
-                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '') : 'NORMAL'}`}
+                                    {b.isSpawningBrood ? 'BIRTHING BABY (-5 HP)...' : `NEXT: ${b.broodNextType ? b.broodNextType.replace('BABY_', '').replace('_', ' ') : 'NORMAL'}`}
                                   </span>
                                   <span className="hud-charge-numeric">
-                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
-                                      ? 'MAX BROOD (3/3)'
+                                    {(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 4)
+                                      ? 'MAX BROOD (4/4)'
                                       : (b.isSpawningBrood
                                         ? '-5 HP'
                                         : `${(((5500 - Math.max(0, b.broodTimer || 0))) / 1000).toFixed(1)}s / 5.5s`)}
@@ -9700,7 +10002,7 @@ function BallBattleGame() {
                                 <div className="hud-charge-bar-track" style={{ display: 'block', width: '100%', height: 4, background: 'rgba(148, 163, 184, 0.16)', borderRadius: 2, overflow: 'hidden' }}>
                                   <div
                                     style={{
-                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 3)
+                                      width: `${(physicsRef.current.balls.filter(o => o.motherId === b.id && !o.isDead && !o.isDying).length >= 4)
                                         ? 100
                                         : Math.min(100, Math.max(0, ((5500 - Math.max(0, b.broodTimer || 0)) / 5500) * 100))}%`,
                                       height: '100%',
@@ -9783,6 +10085,26 @@ function BallBattleGame() {
                                   onMouseLeave={hideTooltip}
                                 >
                                   <BurnIcon size={13} color={b.isBlueBurn ? '#38bdf8' : '#f97316'} /> {b.isBlueBurn ? 'SCORCH' : 'BURN'}
+                                </span>
+                              )}
+                              {b.poisonStacks > 0 && !b.isDead && (
+                                <span
+                                  className="hud-effect-badge poison-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'POISON')}
+                                  onMouseLeave={hideTooltip}
+                                  style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}
+                                >
+                                  <PoisonIcon size={13} color="#10b981" /> POISON ({b.poisonStacks}) - {(b.poisonDuration / 1000).toFixed(1)}s
+                                </span>
+                              )}
+                              {b.type === BALL_TYPES.POISON && (
+                                <span
+                                  className="hud-effect-badge poison-active"
+                                  onMouseEnter={(e) => showTooltip(e, 'POISON')}
+                                  onMouseLeave={hideTooltip}
+                                  style={{ borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399', background: 'rgba(16, 185, 129, 0.12)' }}
+                                >
+                                  <PoisonIcon size={13} color="#10b981" /> VIRULENT POISON
                                 </span>
                               )}
                               {b.shardTargetTimer > 0 && !b.isDead && (

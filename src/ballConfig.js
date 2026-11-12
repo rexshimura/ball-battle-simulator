@@ -27,10 +27,11 @@ export const BALL_TYPES = {
   GUN: 'GUN',
   MULTI: 'MULTI',
   DAGGER: 'DAGGER',
-  PUSH: 'PUSH',
   RAPIER: 'RAPIER',
 
   // Epic
+  PUSH: 'PUSH',
+  POISON: 'POISON',
   ACCELERATOR: 'ACCELERATOR',
   SHARD: 'SHARD',
   SNIPER: 'SNIPER',
@@ -48,6 +49,7 @@ export const BALL_TYPES = {
   BABY_NORMAL: 'BABY_NORMAL',
   BABY_SWORD: 'BABY_SWORD',
   BABY_GUN: 'BABY_GUN',
+  BABY_DUAL_SWORD: 'BABY_DUAL_SWORD',
 };
 
 export const RARITIES = {
@@ -197,20 +199,20 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.KNIFE,
     name: 'Knife Ball',
     rarity: RARITIES.UNCOMMON,
-    description: 'A nimble, compact combat unit equipped with a rapid spinning knife that slashes enemies and inflicts Bleed (-2, -1).',
+    description: 'A nimble combat unit equipped with a rapid spinning combat knife that slashes enemies and inflicts Bleed (-2, -1).',
     baseHp: 100,
     damage: 7,         // Body hitbox deals lower bump damage
-    knifeDamage: 15,   // Rapid spinning knife blade deals 15 damage + Bleed
+    knifeDamage: 9,    // Rapid spinning knife blade deals 9 damage + Bleed
     speed: 2.3,
-    radius: 32,        // made smaller (from 37 down to 32)
-    mass: 0.95,        // slightly lighter for compact body
+    radius: 35,        // slightly bigger body size
+    mass: 1.0,         // balanced mass
     bodyColor: '#4b5563',      // gray body
     highlightColor: '#9ca3af', // lighter gray highlight
     shadowColor: '#1f2937',    // deep dark gray shadow
     knifeColor: '#cbd5e1',     // steel blade
     special: 'Rapid Knife & Bleed',
     inflicts: 'Bleed (-2 -1)',
-    knifeLength: 26,           // compact combat knife blade scaled to smaller body
+    knifeLength: 32,           // authentic combat knife blade length
   },
   [BALL_TYPES.SWORD]: {
     id: BALL_TYPES.SWORD,
@@ -219,7 +221,7 @@ export const BALL_CONFIGS = {
     description: 'Equipped with rotating blade. Heavy blade slash, lower body bump damage.',
     baseHp: 100,
     damage: 6,         // Body hitbox deals lower damage (6 DMG)
-    bladeDamage: 22,   // Sword blade hitbox deals much higher damage (22 DMG)
+    bladeDamage: 16,   // Sword blade hitbox deals much higher damage (16 DMG)
     speed: 2.1,
     radius: 38,        // increased size
     mass: 1.1,
@@ -235,7 +237,7 @@ export const BALL_CONFIGS = {
     rarity: RARITIES.UNCOMMON,
     description: 'Perimeter spikes deliver heavy collision puncture with armored frame immune to bleed.',
     baseHp: 100,
-    damage: 15,
+    damage: 16,
     speed: 2.0,
     radius: 39, // increased size
     mass: 1.25,
@@ -290,7 +292,7 @@ export const BALL_CONFIGS = {
     description: 'Equipped with heavy spinning warhammer. Rebounding blows push enemies back with massive Knockback, and deal 2x damage against Hard/Dense balls (Steel Ball, Stone Ball, Spike Ball).',
     baseHp: 100,
     damage: 7,
-    hammerDamage: 24,
+    hammerDamage: 20,
     speed: 1.9,
     radius: 40,
     mass: 1.6,
@@ -323,10 +325,10 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.DUAL_SWORD,
     name: 'Dual Sword Ball',
     rarity: RARITIES.RARE,
-    description: 'Equipped with dual rotating swords mounted in front and back. Slashes opposing units from both directions with 18 blade damage.',
+    description: 'Equipped with dual rotating swords mounted in front and back. Slashes opposing units from both directions with 12 blade damage.',
     baseHp: 100,
     damage: 8,         // Body hitbox deals 8 damage
-    bladeDamage: 18,   // Each sword blade deals 18 damage
+    bladeDamage: 12,   // Each sword blade deals 12 damage
     speed: 2.5,
     radius: 36,
     mass: 1.1,
@@ -337,11 +339,11 @@ export const BALL_CONFIGS = {
     bladeLength: 50,
   },
 
-    [BALL_TYPES.PRIEST]: {
+  [BALL_TYPES.PRIEST]: {
     id: BALL_TYPES.PRIEST,
     name: 'Priest Ball',
     rarity: RARITIES.RARE,
-    description: 'Channels Divine Blessing after 9s to cast a map-wide heal across the entire canvas on self and all living allies (heal is divided evenly among beneficiaries). Buffs allies with Heal, no enemy inflicts.',
+    description: 'Channels Divine Blessing after 9s to cast a map-wide heal across the entire canvas on self and all living allies, inflicting Heal (+5, +3, +1, +1 HP over time, not divided by number of allies).',
     baseHp: 100,
     damage: 6,
     speed: 2.3,
@@ -349,13 +351,13 @@ export const BALL_CONFIGS = {
     mass: 1.0,
     blessCooldown: 9000,
     blessRadius: 2000,
-    blessPool: 24,
+    healTicks: [5, 3, 1, 1],
     bodyColor: '#fef3c7',      // holy ivory clerical robe
     highlightColor: '#fde047', // radiant celestial gold
     shadowColor: '#d97706',    // warm holy amber shadow
     special: 'Blessing (Canvas-wide Heal after 9s)',
     selfInflicts: 'Blessing',
-    buffs: 'Heal',
+    buffs: 'Heal (+5 +3 +1 +1)',
   },
 
   // ==========================================
@@ -368,7 +370,7 @@ export const BALL_CONFIGS = {
     description: 'Equipped with a rotating firearm that shoots a heavy high-caliber bullet every 3 seconds towards where its barrel points.',
     baseHp: 100,
     damage: 7,         // standard body bump damage
-    bulletDamage: 32,   // heavy bullet damage
+    bulletDamage: 30,   // heavy bullet damage
     shootCooldown: 3000,// 3 second cooldown
     speed: 2.0,
     radius: 38,
@@ -403,7 +405,7 @@ export const BALL_CONFIGS = {
     description: 'Armed with a large combat dagger that spins and bounces. Contact with body or weapon marks the enemy with Dagger Mark; after 2s delay, Dagger Ball stops moving to aim for 2s and throws its dagger. Hits embed into the target inflicting Bleed and Slow (-25% SPD, -25% DMG), retrievable only by body ramming that enemy. Misses stick to walls and return via telekinesis after 4s.',
     baseHp: 100,
     damage: 4,
-    daggerDamage: 10,
+    daggerDamage: 9,
     speed: 2.3,
     radius: 34,
     mass: 1.0,
@@ -419,11 +421,11 @@ export const BALL_CONFIGS = {
     daggerWallDuration: 4000,
   },
 
-    [BALL_TYPES.PUSH]: {
+  [BALL_TYPES.PUSH]: {
     id: BALL_TYPES.PUSH,
     name: 'Push Ball',
-    rarity: RARITIES.UNIQUE,
-    description: 'Requires 1 body hit on an enemy to charge a kinetic repulsor pulse. Once charged, pushes nearby enemy balls violently away in a 130px radius, inflicting Knockback, and must land another hit to charge again.',
+    rarity: RARITIES.EPIC,
+    description: 'Initially needs to hit an enemy once to activate its passive and start the Push effect. When ready, projects a proximity radius that pushes approaching enemies away with Knockback. Starts with a 12s cooldown; subsequent hits reduce cooldown progressively: 12s -> 10s -> 8s -> 6s -> 4s -> 2s.',
     baseHp: 100,
     damage: 6,
     speed: 2.5,
@@ -432,30 +434,47 @@ export const BALL_CONFIGS = {
     bodyColor: '#4338ca',      // deep kinetic indigo
     highlightColor: '#818cf8', // radiant electric violet glint
     shadowColor: '#1e1b4b',    // dark midnight indigo shadow
-    special: 'Hit-Charged Repulsor Pulse',
+    special: 'Proximity Repulsor (12s -> 2s Cooldown on Hits)',
     inflicts: 'Knockback',
     selfInflicts: 'Push',
-    pushRadius: 130,
-    pushCooldown: 2500,
+    pushRadius: 135,
+    pushCooldownTiers: [12000, 10000, 8000, 6000, 4000, 2000],
     pushForce: 10.5,
     pushDamage: 6,
+  },
+  [BALL_TYPES.POISON]: {
+    id: BALL_TYPES.POISON,
+    name: 'Poison Ball',
+    rarity: RARITIES.EPIC,
+    description: 'A venomous sphere that inflicts virulent Poison upon contact. Struck targets suffer -1 damage every 0.8s for 12s. Each subsequent hit adds another stack (-1 -> -2 -> -3...) and refreshes the 12s duration. Stacks have no limit.',
+    baseHp: 100,
+    damage: 7,
+    speed: 2.2,
+    radius: 35,
+    mass: 1.05,
+    bodyColor: '#065f46',      // rich dark toxic emerald
+    highlightColor: '#34d399', // bright venom lime glint
+    shadowColor: '#022c22',    // deep dark venom sludge
+    special: 'Limitless Stacking Poison (12s Duration)',
+    inflicts: 'Poison (-1/tick Stacking)',
+    selfInflicts: 'Poison',
   },
   [BALL_TYPES.RAPIER]: {
     id: BALL_TYPES.RAPIER,
     name: 'Rapier Ball',
     rarity: RARITIES.UNIQUE,
-    description: 'Equipped with an elegant fencing rapier dealing 12 weapon damage that spins in normal combat. Landing a hit (5 body DMG or 12 weapon DMG) marks that enemy with Rapier Mark; Rapier Ball halts and aims for 0.8s before executing a lightning forward Dash thrust piercing for 28 DMG.',
+    description: 'Equipped with an elegant fencing rapier dealing 7 weapon damage that spins in normal combat. Landing a hit (3 body DMG or 7 weapon DMG) marks that enemy with Rapier Mark; Rapier Ball halts and aims for 0.8s before executing a lightning forward Dash thrust piercing for 11 DMG.',
     baseHp: 100,
-    damage: 5,
-    rapierDamage: 12,
-    dashDamage: 28,
+    damage: 3,
+    rapierDamage: 7,
+    dashDamage: 11,
     speed: 2.3,
     dashSpeed: 17.5,
     radius: 34,
     mass: 1.0,
-    bodyColor: '#1e293b',      // elegant midnight duelist slate
-    highlightColor: '#f43f5e', // crimson duelist flourish
-    shadowColor: '#0f172a',    // deep dark shadow
+    bodyColor: '#1d4ed8',      // elegant duelist sapphire blue
+    highlightColor: '#60a5fa', // bright sky-blue glint
+    shadowColor: '#172554',    // deep dark navy shadow
     guardColor: '#fbbf24',     // ornate golden swept cup hilt
     special: 'Rapier Mark & Dash Thrust',
     inflicts: 'Rapier Mark',
@@ -507,15 +526,15 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.SNIPER,
     name: 'Sniper Ball',
     rarity: RARITIES.EPIC,
-    description: 'Mounted with a long-range tactical sniper rifle. Has very low body collision damage (3 DMG), but periodically freezes in midair to lock its precision laser sight onto an enemy and discharge an armor-piercing 15 DMG sniper round.',
+    description: 'Mounted with a long-range tactical sniper rifle. Has very low body collision damage (3 DMG), but periodically freezes in midair to lock its precision laser sight onto an enemy and discharge an armor-piercing 17 DMG sniper round.',
     baseHp: 100,
     damage: 3,
     speed: 2.1,
     radius: 38,
     mass: 1.05,
-    bulletDamage: 15,
+    bulletDamage: 17,
     sniperCooldown: 4000,
-    aimDuration: 1000, // Deducted by 0.8s (1.0s precision aim freeze)
+    aimDuration: 1800, // Deducted by 0.8s (1.0s precision aim freeze)
     bodyColor: '#1e293b',      // Matte tactical slate
     highlightColor: '#38bdf8', // Precision cyan laser optic sheen
     shadowColor: '#090d16',    // Deep stealth black shadow
@@ -601,7 +620,7 @@ export const BALL_CONFIGS = {
     id: BALL_TYPES.MOTHER,
     name: 'Mother Ball',
     rarity: RARITIES.MYTHICAL,
-    description: 'A mythical matriarch unit that is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby (high HP), Sword Baby (spinning blade), and Gun Baby (projectile nozzle), maintaining up to 3 active baby balls.',
+    description: 'A mythical matriarch unit that is very slow (1.2 SPD). Every 5.5s, stops moving to birth a baby ball from her brood (costs 5 HP). Cycles between Tough Baby (high HP), Sword Baby (spinning blade), Gun Baby (projectile nozzle), and Dual Sword Baby (twin blades), maintaining up to 4 active baby balls.',
     baseHp: 120,
     damage: 7,
     speed: 1.2,
@@ -610,11 +629,11 @@ export const BALL_CONFIGS = {
     bodyColor: '#831843',      // royal cosmic magenta / fuchsia
     highlightColor: '#fbcfe8', // radiant rose gold glint
     shadowColor: '#500724',    // deep dark wine shadow
-    special: 'Brood (Summons 3 Baby Varieties, Costs 5 HP)',
+    special: 'Brood (Summons 4 Baby Varieties, Costs 5 HP)',
     selfInflicts: 'Brood',
     broodCooldown: 5500,
     broodHpCost: 5,
-    broodMaxCap: 3,
+    broodMaxCap: 4,
   },
 
   // ==========================================
@@ -673,6 +692,25 @@ export const BALL_CONFIGS = {
     gunColor: '#78350f',
     isSummonOnly: true,
     special: 'Mini Gun Cannon (3.5s Cooldown)',
+  },
+  [BALL_TYPES.BABY_DUAL_SWORD]: {
+    id: BALL_TYPES.BABY_DUAL_SWORD,
+    name: 'Baby Dual Sword Ball',
+    rarity: RARITIES.COMMON,
+    description: 'Mini skirmisher baby ball armed with twin spinning miniature combat swords.',
+    baseHp: 40,
+    damage: 4,
+    bladeDamage: 9,
+    bladeLength: 22,
+    speed: 2.9,
+    radius: 16,
+    mass: 0.45,
+    bodyColor: '#2563eb',
+    highlightColor: '#93c5fd',
+    shadowColor: '#1e3a8a',
+    swordColor: '#93c5fd',
+    isSummonOnly: true,
+    special: 'Mini Twin Blades',
   },
 };
 

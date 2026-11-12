@@ -834,6 +834,15 @@ html, body, #root {
   100% { border-color: #c084fc; box-shadow: 0 0 7px rgba(192, 132, 252, 0.55); }
 }
 
+.hud-effect-badge.poison-active {
+  animation: poisonPulse 1.0s infinite alternate;
+}
+
+@keyframes poisonPulse {
+  0% { border-color: #10b981; box-shadow: 0 0 3px rgba(16, 185, 129, 0.4); }
+  100% { border-color: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.7); }
+}
+
 .hud-effect-badge.flaming-active {
   animation: flamePulse 1.2s infinite alternate;
 }

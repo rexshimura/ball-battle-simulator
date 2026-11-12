@@ -391,3 +391,16 @@ export function DashIcon({ size = 11, color = 'currentColor' }) {
     </svg>
   );
 }
+
+export function PoisonIcon({ size = 11, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: '-1px' }}>
+      <path d="M12 2v4" />
+      <path d="M8 6h8" />
+      <path d="M9 6v3c0 2-4 5-4 9a7 7 0 0 0 14 0c0-4-4-7-4-9V6" />
+      <circle cx="10" cy="15" r="1.2" fill={color} />
+      <circle cx="14" cy="13" r="1.5" fill={color} />
+      <circle cx="11.5" cy="11.5" r="0.8" fill={color} />
+    </svg>
+  );
+}
